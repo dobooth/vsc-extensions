@@ -1,8 +1,8 @@
 {
   "name": "adobe-markdown-authoring",
-  "displayName": "Adobe Markdown Authoring",
+  "displayName": "Don's ExL",
   "description": "Integrated preview, linter validation, and keyboard shortcuts for Adobe Flavored Markdown.",
-  "version": "1.1.7",
+  "version": "2.1.5",
   "publisher": "AdobeExL",
   "engines": {
     "vscode": "^1.48.0"
@@ -25,8 +25,9 @@
     "markdown.previewStyles": [
       "./assets/styles/typekit.css",
       "./assets/styles/base.css",
+      "./assets/styles/spectrum.css",
       "./assets/styles/docs.css",
-      "./assets/styles/spectrum.css"
+      "./assets/styles/adobe-preview.css"
     ],
     "markdown.markdownItPlugins": true,
     "configuration": {
@@ -370,7 +371,7 @@
       },
       {
         "command": "md-shortcut.toggleCaution",
-        "key": "Ctrl+m Ctrl+c",
+        "key": "Ctrl+m Ctrl+h",
         "when": "editorTextFocus && markdown:enabled"
       },
       {
@@ -390,7 +391,7 @@
       },
       {
         "command": "md-shortcut.toggleAvailability",
-        "key": "Ctrl+m Ctrl+u",
+        "key": "Ctrl+m Ctrl+j",
         "when": "editorTextFocus && markdown:enabled"
       },
       {
@@ -405,7 +406,7 @@
       },
       {
         "command": "md-shortcut.toggleInfo",
-        "key": "Ctrl+m Ctrl+i",
+        "key": "Ctrl+m Ctrl+f",
         "when": "editorTextFocus && markdown:enabled"
       },
       {
@@ -415,7 +416,7 @@
       },
       {
         "command": "md-shortcut.toggleMoreLikeThis",
-        "key": "Ctrl+m Ctrl+m",
+        "key": "Ctrl+m Ctrl+o",
         "when": "editorTextFocus && markdown:enabled"
       },
       {

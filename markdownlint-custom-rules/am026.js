@@ -10,7 +10,7 @@ module.exports = {
   description: 'Table must use consistent indent level',
   tags: ['tables'],
 
-  function: function AM023(params, onError) {
+  function: function AM026(params, onError) {
     shared.filterTokens(params, 'table_open', function forToken(token) {
       // remove whitespace and > if it's a note block
       var indent = token.line.replace(/^>/, '').search(/\S/);
@@ -29,7 +29,7 @@ module.exports = {
               shared.addError(
                 onError,
                 lineIndex + 1,
-                'Excpected ' + indent + ', found ' + lineIndent
+                'Expected ' + indent + ', found ' + lineIndent
               );
             }
           }

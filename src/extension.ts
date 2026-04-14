@@ -110,7 +110,6 @@ export function activate(context: ExtensionContext) {
   function relativePath(src: string, tgt: string): string {
     const srcelts: string[] = src.split('/');
     const tgtelts: string[] = tgt.split('/');
-    let eltno = 0;
     // Find the offset in tgt where folder paths are no longer the same.
     let srcelt: string | undefined = srcelts.shift();
     let tgtelt: string | undefined = tgtelts.shift();
@@ -127,18 +126,7 @@ export function activate(context: ExtensionContext) {
     return fname;
   }
 
-  /** 
-   * Function to find the current root folder of the project.
-   */
-  function getRootFolder(): WorkspaceFolder | undefined {
-    const folders = workspace.workspaceFolders;
-    if (folders) {
-      return folders[0];
-    }
-    return undefined;
-  }
-
-  /** 
+  /**
    * Given a link file path, return the path relative to the current workspace folder.
    */
   function makeRelativeLink(link: string): string {
@@ -210,17 +198,107 @@ export function activate(context: ExtensionContext) {
           md.options
         )}`
       );
-      return md
-        .use(require('markdown-it-replace-link'), {
-          replaceLink: function (link: string, env: any) {
-            return makeRelativeLink(link);
-          },
-        })
-        .use(require('markdown-it-adobe-plugin'), 
-          {
-            root: getRootFolder()?.uri.path, 
-            throwError: false
-          });
+
+      md.use(require('markdown-it-replace-link'), {
+        replaceLink: function (link: string, _env: any) {
+          return makeRelativeLink(link);
+        },
+      });
+
+      // Adobe inline tags: strip the wrapper, render text content only.
+      //   [!DNL Marketo]      → Marketo   (do-not-localize; purely a translation directive)
+      //   [!UICONTROL Save]   → Save      (UI label; purely a translation directive)
+      //
+      // We register these before the built-in 'link' rule so that markdown-it
+      // never misinterprets [ as the start of a link.
+      const adobeInlineRule = (tag: string) => {
+        const re = new RegExp('^\\[!' + tag + '\\s+([^\\]]+)\\]');
+        return function (state: any, silent: boolean): boolean {
+          if (state.src.charCodeAt(state.pos) !== 0x5B /* [ */) { return false; }
+          const m = re.exec(state.src.slice(state.pos));
+          if (!m) { return false; }
+          if (!silent) {
+            const token = state.push('text', '', 0);
+            token.content = m[1];
+          }
+          state.pos += m[0].length;
+          return true;
+        };
+      };
+      md.inline.ruler.before('link', 'adobe-dnl', adobeInlineRule('DNL'));
+      md.inline.ruler.before('link', 'adobe-uicontrol', adobeInlineRule('UICONTROL'));
+
+      // Transform Adobe-flavored alert blockquotes into styled divs.
+      //   >[!NOTE]  → <div class="extension note" data-label="NOTE">…</div>
+      // The docs.css .extension.* rules apply Spectrum colours; adobe-preview.css
+      // uses data-label for the visible type label via ::before { content: attr(data-label) }.
+      const alertTypes: {[key: string]: {cls: string, label: string}} = {
+        NOTE:           {cls: 'note',           label: 'NOTE'},
+        TIP:            {cls: 'tip',            label: 'TIP'},
+        IMPORTANT:      {cls: 'important',      label: 'IMPORTANT'},
+        WARNING:        {cls: 'warning',        label: 'WARNING'},
+        CAUTION:        {cls: 'caution',        label: 'CAUTION'},
+        ADMIN:          {cls: 'admin',          label: 'ADMIN'},
+        ADMINISTRATION: {cls: 'administration', label: 'ADMIN'},
+        AVAILABILITY:   {cls: 'availability',   label: 'AVAILABILITY'},
+        PREREQUISITES:  {cls: 'prerequisites',  label: 'PREREQUISITES'},
+        INFO:           {cls: 'info',           label: 'INFO'},
+        ERROR:          {cls: 'error',          label: 'ERROR'},
+        SUCCESS:        {cls: 'success',        label: 'SUCCESS'},
+        MORELIKETHIS:   {cls: 'morelikethis',   label: 'More like this'},
+      };
+      md.core.ruler.push('adobe-alerts', function (state) {
+        const tokens = state.tokens;
+        // Iterate in reverse so splice offsets don't disturb earlier unprocessed indices.
+        for (let i = tokens.length - 1; i >= 0; i--) {
+          if (tokens[i].type !== 'blockquote_open') { continue; }
+
+          // Find the matching blockquote_close (handles nested blockquotes).
+          let closeIdx = -1;
+          let depth = 0;
+          for (let j = i + 1; j < tokens.length; j++) {
+            if (tokens[j].type === 'blockquote_open') { depth++; continue; }
+            if (tokens[j].type === 'blockquote_close') {
+              if (depth === 0) { closeIdx = j; break; }
+              depth--;
+            }
+          }
+          if (closeIdx < 0) { continue; }
+
+          // Inspect the first inline token inside the blockquote for [!TYPE].
+          let alertType: {cls: string, label: string} | null = null;
+          let typeParaOpen = -1;
+          let typeParaClose = -1;
+          for (let j = i + 1; j < closeIdx; j++) {
+            if (tokens[j].type !== 'inline') { continue; }
+            const m = /^\[!([\w]+)\]\s*$/.exec(tokens[j].content.trim());
+            if (m && alertTypes[m[1]]) {
+              alertType = alertTypes[m[1]];
+              if (tokens[j - 1]?.type === 'paragraph_open') { typeParaOpen = j - 1; }
+              if (tokens[j + 1]?.type === 'paragraph_close') { typeParaClose = j + 1; }
+            }
+            break; // Only check the first inline token.
+          }
+          if (!alertType) { continue; }
+
+          // Replace blockquote_close first (highest index — safe to modify first).
+          tokens[closeIdx].type = 'html_block';
+          tokens[closeIdx].content = '</div>';
+          tokens[closeIdx].tag = '';
+
+          // Remove the [!TYPE] paragraph (paragraph_open + inline + paragraph_close).
+          if (typeParaOpen >= 0 && typeParaClose >= 0) {
+            tokens.splice(typeParaOpen, typeParaClose - typeParaOpen + 1);
+          }
+
+          // Replace blockquote_open with the opening div (data-label drives the ::before label).
+          tokens[i].type = 'html_block';
+          tokens[i].content = `<div class="extension ${alertType.cls}" data-label="${alertType.label}">`;
+          tokens[i].tag = '';
+        }
+      });
+
+      return md;
     },
   };
 }

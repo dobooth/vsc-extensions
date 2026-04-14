@@ -21,4 +21,11 @@ module.exports = [
   require('./am018'),
   require('./am019'),
   require('./am020'),
+  require('./am021'),
+  require('./am022'),
+  require('./am023'),
+  require('./am024'),
+  require('./am026'),
+  require('./am028'),
+  require('./am029'),
 ];

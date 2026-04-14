@@ -134,7 +134,8 @@ export function getSurroundingWord(
 export function surroundBlockSelection(
   startPattern: string,
   endPattern?: string,
-  wordPattern?: RegExp
+  wordPattern?: RegExp,
+  cursorSnippet?: string
 ): Thenable<void | boolean> {
   if (endPattern === undefined || endPattern === null) {
     endPattern = startPattern;
@@ -162,6 +163,11 @@ export function surroundBlockSelection(
   }
 
   if (!isAnythingSelected()) {
+    // When a snippet string is provided, use insertSnippet so $0 controls
+    // exactly where the cursor lands after the block is inserted.
+    if (cursorSnippet !== undefined) {
+      return editor.insertSnippet(new vscode.SnippetString(cursorSnippet));
+    }
     var position = selection.active;
     var newPosition = position.with(position.line + 2, 1);
     return editor

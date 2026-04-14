@@ -46,7 +46,7 @@ function containsAfmTag(line) {
 module.exports = {
   names: ['AM021', 'youtube-video'],
   description: 'YouTube videos are not supported',
-  tags: ['adobe-markdown', 'adobe-markdown'],
+  tags: ['adobe-markdown'],
   function: function AM021(params, onError) {
     var incodeblock = false;
 
@@ -58,7 +58,6 @@ module.exports = {
         // TODO: split the tag out here
         if (token.line.indexOf('[!VIDEO]') > 0) {
           // check for content after the video link
-          var line = token.line;
 
           if (line.includes('youtube.com') || line.includes('youtu.be')) {
             shared.addErrorContext(onError, token.lineNumber, token.line);
