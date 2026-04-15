@@ -1,11 +1,11 @@
 {
   "name": "adobe-markdown-authoring",
-  "displayName": "Don's ExL",
+  "displayName": "ExL Markdown Authoring",
   "description": "Integrated preview, linter validation, and keyboard shortcuts for Adobe Flavored Markdown.",
-  "version": "2.1.5",
+  "version": "2.2.0",
   "publisher": "AdobeExL",
   "engines": {
-    "vscode": "^1.48.0"
+    "vscode": "^1.75.0"
   },
   "homepage": "https://github.com/AdobeDocs/vsc-extensions.git",
   "repository": {
@@ -28,6 +28,29 @@
       "./assets/styles/spectrum.css",
       "./assets/styles/docs.css",
       "./assets/styles/adobe-preview.css"
+    ],
+    "markdown.previewScripts": [
+      "./node_modules/prismjs/prism.js",
+      "./node_modules/prismjs/components/prism-clike.js",
+      "./node_modules/prismjs/components/prism-javascript.js",
+      "./node_modules/prismjs/components/prism-typescript.js",
+      "./node_modules/prismjs/components/prism-markup.js",
+      "./node_modules/prismjs/components/prism-markup-templating.js",
+      "./node_modules/prismjs/components/prism-css.js",
+      "./node_modules/prismjs/components/prism-scss.js",
+      "./node_modules/prismjs/components/prism-json.js",
+      "./node_modules/prismjs/components/prism-bash.js",
+      "./node_modules/prismjs/components/prism-python.js",
+      "./node_modules/prismjs/components/prism-yaml.js",
+      "./node_modules/prismjs/components/prism-java.js",
+      "./node_modules/prismjs/components/prism-sql.js",
+      "./node_modules/prismjs/components/prism-graphql.js",
+      "./node_modules/prismjs/components/prism-diff.js",
+      "./node_modules/prismjs/components/prism-http.js",
+      "./node_modules/prismjs/components/prism-velocity.js",
+      "./node_modules/prismjs/components/prism-apex.js",
+      "./node_modules/prismjs/components/prism-php.js",
+      "./assets/scripts/prism-init.js"
     ],
     "markdown.markdownItPlugins": true,
     "configuration": {
@@ -309,11 +332,6 @@
       }
     ],
     "keybindings": [
-      {
-        "command": "md-shortcut.showCommandPalette",
-        "key": "Ctrl+m Ctrl+m",
-        "when": "editorTextFocus && markdown:enabled"
-      },
       {
         "command": "md-shortcut.toggleBold",
         "key": "Ctrl+b",
@@ -604,7 +622,6 @@
   },
   "scripts": {
     "vscode:prepublish": "yarn run compile",
-    "vscode:uninstall": "node ./out/config/uninstall",
     "compile": "tsc -p ./",
     "lint": "eslint src --ext ts",
     "watch": "tsc -watch -p ./",
@@ -614,73 +631,6 @@
   "extensionDependencies": [
     "davidanson.vscode-markdownlint"
   ],
-  "markdownlint.config": {
-    "line-length": false,
-    "AM001": false,
-    "AM009": false,
-    "AM011": false,
-    "MD003": {
-      "style": "atx"
-    },
-    "MD007": {
-      "indent": 4
-    },
-    "MD009": false,
-    "MD012": false,
-    "MD014": false,
-    "MD024": false,
-    "MD025": {
-      "front_matter_title": ""
-    },
-    "MD026": false,
-    "MD027": false,
-    "MD028": false,
-    "MD030": {
-      "ul_multi": 3,
-      "ol_multi": 2
-    },
-    "MD033": {
-      "allowed_elements": [
-        "a",
-        "b",
-        "br",
-        "caption",
-        "code",
-        "col",
-        "colgroup",
-        "div",
-        "em",
-        "I",
-        "img",
-        "li",
-        "ol",
-        "p",
-        "pre",
-        "s",
-        "span",
-        "strong",
-        "sub",
-        "sup",
-        "table",
-        "tbody",
-        "td",
-        "tfoot",
-        "th",
-        "thead",
-        "tr",
-        "u",
-        "ul"
-      ]
-    },
-    "MD036": false,
-    "MD038": false,
-    "MD039": false,
-    "MD040": false,
-    "MD045": false
-  },
-  "markdownlint.customRules": [
-    "{adobeexl.adobe-markdown-authoring}/markdownlint-custom-rules/rules.js"
-  ],
   "dependencies": {
     "js-yaml": "^4.1.0",
     "markdown-it": "^13.0.1",
@@ -688,7 +638,7 @@
   },
   "devDependencies": {
     "@types/glob": "^7.1.3",
-    "@types/markdown-it": "^12.2.3",
+    "@types/markdown-it": "^13.0.9",
     "@types/mocha": "^9.1.1",
     "@types/node": "^18.0.4",
     "@typescript-eslint/eslint-plugin": "^5.30.6",
@@ -698,7 +648,6 @@
     "glob": "^8.0.3",
     "mocha": "^10.0.0",
     "typescript": "^4.7.4",
-    "vscode": "^1.1.37",
     "vscode-test-content": "^1.2.0"
   },
   "__metadata": {

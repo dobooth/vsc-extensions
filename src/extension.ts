@@ -205,6 +205,7 @@ export function activate(context: ExtensionContext) {
         },
       });
 
+
       // Adobe inline tags: strip the wrapper, render text content only.
       //   [!DNL Marketo]      → Marketo   (do-not-localize; purely a translation directive)
       //   [!UICONTROL Save]   → Save      (UI label; purely a translation directive)
@@ -297,6 +298,54 @@ export function activate(context: ExtensionContext) {
           tokens[i].tag = '';
         }
       });
+
+      // Transform +++ collapsible sections into <details>/<summary>.
+      //   +++Title text        →  <details><summary>Title text</summary>
+      //   Content here.        →    <p>Content here.</p>
+      //   +++                  →  </details>
+      md.block.ruler.before('fence', 'collapsible', (state: any, startLine: number, endLine: number, silent: boolean): boolean => {
+        const pos = state.bMarks[startLine] + state.tShift[startLine];
+        const max = state.eMarks[startLine];
+        const lineText = state.src.slice(pos, max).trim();
+
+        if (!lineText.startsWith('+++')) { return false; }
+        const title = lineText.slice(3).trim();
+        if (!title) { return false; } // bare +++ is a closing marker, not an opener
+
+        // Find the matching closing +++ (alone on its own line)
+        let closeIdx = -1;
+        for (let i = startLine + 1; i < endLine; i++) {
+          const p = state.bMarks[i] + state.tShift[i];
+          const m = state.eMarks[i];
+          if (state.src.slice(p, m).trim() === '+++') { closeIdx = i; break; }
+        }
+        if (closeIdx < 0) { return false; }
+
+        if (silent) { return true; }
+
+        const safeTitle = title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        let token = state.push('html_block', '', 0);
+        token.content = `<details>\n<summary>${safeTitle}</summary>\n`;
+        token.map = [startLine, startLine + 1];
+
+        const oldParent  = state.parentType;
+        const oldLineMax = state.lineMax;
+        state.parentType = 'container';
+        state.lineMax    = closeIdx;
+
+        state.md.block.tokenize(state, startLine + 1, closeIdx);
+
+        state.parentType = oldParent;
+        state.lineMax    = oldLineMax;
+
+        token = state.push('html_block', '', 0);
+        token.content = '</details>\n';
+        token.map = [closeIdx, closeIdx + 1];
+
+        state.line = closeIdx + 1;
+        return true;
+      }, { alt: ['paragraph', 'reference'] });
 
       return md;
     },

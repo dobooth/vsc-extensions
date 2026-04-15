@@ -114,8 +114,8 @@
   font-family: "Roboto Mono", "Source Code Pro", menlo, consolas,
     "Liberation Mono", monospace;
   font-size: 0.875rem;
-  background-color: #f5f5f5 !important;
-  color: #323232;
+  background-color: #1d1f21 !important;  /* --non-spectrum-jet-black */
+  color: #c5c8c6;                         /* --non-spectrum-silver-chalice */
   border-radius: 4px;
   padding: 1rem 1.5rem;
   line-height: 1.5;
@@ -125,8 +125,8 @@
   background: none;
   padding: 0;
   border-radius: 0;
-  color: inherit;
   font-size: 1em;
+  color: #c5c8c6;  /* --non-spectrum-silver-chalice: overrides .vscode-body code dark charcoal */
 }
 
 /* ─── Tables ──────────────────────────────────────────────────────────────── */
@@ -321,3 +321,56 @@
 .vscode-body details summary::-webkit-details-marker {
   color: #0268e3;
 }
+
+/* ─── Prism token colors — Spectrum palette ───────────────────────────────── */
+/* Comments ----------------------------------------------------------------- */
+.vscode-body pre code .token.comment,
+.vscode-body pre code .token.prolog,
+.vscode-body pre code .token.cdata         { color: #909090; font-style: italic; } /* spectrum-gray-500 */
+.vscode-body pre code .token.doctype       { color: #909090; }                     /* spectrum-gray-500 */
+
+/* Structure / punctuation -------------------------------------------------- */
+.vscode-body pre code .token.punctuation   { color: #b1b1b1; }                     /* spectrum-gray-400 */
+.vscode-body pre code .token.operator      { color: #b1b1b1; }                     /* spectrum-gray-400 */
+
+/* Tags & properties (HTML tags, JSON/JS keys, CSS properties) -------------- */
+.vscode-body pre code .token.tag           { color: #60d8f3; }                     /* spectrum-cyan-400 */
+.vscode-body pre code .token.property      { color: #65dad2; }                     /* spectrum-seafoam-400 */
+.vscode-body pre code .token.namespace     { color: #88e7fa; }                     /* spectrum-cyan-300 */
+
+/* Attributes --------------------------------------------------------------- */
+.vscode-body pre code .token.attr-name     { color: #65dad2; }                     /* spectrum-seafoam-400 */
+.vscode-body pre code .token.attr-value    { color: #aef69d; }                     /* spectrum-celery-200 */
+
+/* Strings & chars ---------------------------------------------------------- */
+.vscode-body pre code .token.string,
+.vscode-body pre code .token.char,
+.vscode-body pre code .token.url           { color: #aef69d; }                     /* spectrum-celery-200 */
+.vscode-body pre code .token.entity        { color: #fbf198; }                     /* spectrum-yellow-100 */
+
+/* Numbers & literals ------------------------------------------------------- */
+.vscode-body pre code .token.number        { color: #f592f3; }                     /* spectrum-fuchsia-500 */
+.vscode-body pre code .token.boolean       { color: #fbaef6; }                     /* spectrum-fuchsia-400 */
+.vscode-body pre code .token.constant      { color: #fbaef6; }                     /* spectrum-fuchsia-400 */
+.vscode-body pre code .token.symbol        { color: #cca4fd; }                     /* spectrum-purple-500 */
+
+/* Keywords ----------------------------------------------------------------- */
+.vscode-body pre code .token.keyword       { color: #96cefd; }                     /* spectrum-blue-400 */
+.vscode-body pre code .token.atrule        { color: #78bbfa; }                     /* spectrum-blue-500 */
+
+/* Functions & types -------------------------------------------------------- */
+.vscode-body pre code .token.function      { color: #ffa037; }                     /* spectrum-orange-500 */
+.vscode-body pre code .token.class-name    { color: #ffbb63; }                     /* spectrum-orange-400 */
+.vscode-body pre code .token.builtin       { color: #f68511; }                     /* spectrum-orange-600 */
+
+/* CSS selectors & important ------------------------------------------------ */
+.vscode-body pre code .token.selector      { color: #ff9b88; }                     /* spectrum-red-500 */
+.vscode-body pre code .token.important     { color: #ff7c65; font-weight: bold; }  /* spectrum-red-600 */
+
+/* Variables & regex -------------------------------------------------------- */
+.vscode-body pre code .token.variable      { color: #78bbfa; }                     /* spectrum-blue-500 */
+.vscode-body pre code .token.regex         { color: #f8e750; }                     /* spectrum-yellow-200 */
+
+/* Diff --------------------------------------------------------------------- */
+.vscode-body pre code .token.inserted      { color: #67dea8; }                     /* spectrum-green-400 */
+.vscode-body pre code .token.deleted       { color: #ff9b88; }                     /* spectrum-red-500 */
