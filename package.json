@@ -22,6 +22,24 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "exl-jenkins",
+          "title": "EXL Jenkins",
+          "icon": "./assets/icons/jenkins.svg"
+        }
+      ]
+    },
+    "views": {
+      "exl-jenkins": [
+        {
+          "type": "webview",
+          "id": "adobeExl.jenkinsPanel",
+          "name": "Build Monitor"
+        }
+      ]
+    },
     "markdown.previewStyles": [
       "./assets/styles/typekit.css",
       "./assets/styles/base.css",
@@ -641,13 +659,14 @@
     "@types/markdown-it": "^13.0.9",
     "@types/mocha": "^9.1.1",
     "@types/node": "^18.0.4",
+    "@types/vscode": "^1.75.0",
     "@typescript-eslint/eslint-plugin": "^5.30.6",
     "@typescript-eslint/parser": "^5.30.6",
     "@vscode/test-electron": "^2.1.5",
     "eslint": "^8.19.0",
     "glob": "^8.0.3",
     "mocha": "^10.0.0",
-    "typescript": "^4.7.4",
+    "typescript": "^5.8.3",
     "vscode-test-content": "^1.2.0"
   },
   "__metadata": {

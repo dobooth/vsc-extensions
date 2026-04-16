@@ -7,6 +7,7 @@ import {
   window,
   WorkspaceFolder,
 } from 'vscode';
+import { JenkinsPanelProvider } from './panels/jenkins-panel';
 
 import {
 	checkMarkdownlintCustomProperty,checkMarkdownlintConfigSettings
@@ -96,6 +97,11 @@ export function activate(context: ExtensionContext) {
 
   register(context);
   output.appendLine(`[${msTimeValue}] - Registered markdown shortcuts`);
+
+  const jenkinsProvider = new JenkinsPanelProvider(context);
+  context.subscriptions.push(
+    (window as any).registerWebviewViewProvider('adobeExl.jenkinsPanel', jenkinsProvider)
+  );
 
   // /**
   //  * Function to compute the relative path between src and tgt without regard
