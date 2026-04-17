@@ -100,7 +100,9 @@ export function activate(context: ExtensionContext) {
 
   const jenkinsProvider = new JenkinsPanelProvider(context);
   context.subscriptions.push(
-    (window as any).registerWebviewViewProvider('adobeExl.jenkinsPanel', jenkinsProvider)
+    (window as any).registerWebviewViewProvider('adobeExl.jenkinsPanel', jenkinsProvider, {
+      webviewOptions: { retainContextWhenHidden: true }
+    })
   );
 
   // /**
@@ -211,6 +213,9 @@ export function activate(context: ExtensionContext) {
         },
       });
 
+      // HTML-escape helper used throughout the inline token builders.
+      const esc = (s: string) =>
+        s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
       // Adobe inline tags: strip the wrapper, render text content only.
       //   [!DNL Marketo]      → Marketo   (do-not-localize; purely a translation directive)
@@ -235,10 +240,50 @@ export function activate(context: ExtensionContext) {
       md.inline.ruler.before('link', 'adobe-dnl', adobeInlineRule('DNL'));
       md.inline.ruler.before('link', 'adobe-uicontrol', adobeInlineRule('UICONTROL'));
 
-      // Transform Adobe-flavored alert blockquotes into styled divs.
-      //   >[!NOTE]  → <div class="extension note" data-label="NOTE">…</div>
-      // The docs.css .extension.* rules apply Spectrum colours; adobe-preview.css
-      // uses data-label for the visible type label via ::before { content: attr(data-label) }.
+      // Inline badge: [!BADGE text]{type=Informative url="..." tooltip="..."}
+      // Types: Informative (blue), Positive (green), Negative (red), Neutral (gray), Caution (yellow)
+      md.inline.ruler.before('link', 'adobe-badge', function (state: any, silent: boolean): boolean {
+        if (state.src.charCodeAt(state.pos) !== 0x5B /* [ */) { return false; }
+        const m = /^\[!BADGE\s+([^\]]+)\](?:\{([^}]*)\})?/.exec(state.src.slice(state.pos));
+        if (!m) { return false; }
+        if (!silent) {
+          const text = m[1].trim();
+          const attrs = m[2] || '';
+          const typeMatch = /type=(\w+)/i.exec(attrs);
+          const badgeType = (typeMatch ? typeMatch[1] : 'Informative').toLowerCase();
+          const typeClass: {[k: string]: string} = {
+            informative: 'badge-informative',
+            positive:    'badge-positive',
+            negative:    'badge-negative',
+            neutral:     'badge-neutral',
+            caution:     'badge-caution',
+          };
+          const cls = typeClass[badgeType] || 'badge-informative';
+          const urlMatch     = /url="([^"]*)"/.exec(attrs);
+          const tooltipMatch = /tooltip="([^"]*)"/.exec(attrs);
+          const url     = urlMatch     ? urlMatch[1]     : '';
+          const tooltip = tooltipMatch ? tooltipMatch[1] : '';
+          const tipAttr = tooltip ? ` title="${esc(tooltip)}"` : '';
+          const safeText = esc(text);
+          let html: string;
+          if (url) {
+            html = `<a href="${esc(url)}" class="exl-badge ${cls}"${tipAttr}>${safeText}</a>`;
+          } else {
+            html = `<span class="exl-badge ${cls}"${tipAttr}>${safeText}</span>`;
+          }
+          const token = state.push('html_inline', '', 0);
+          token.content = html;
+        }
+        state.pos += m[0].length;
+        return true;
+      });
+
+      // Transform Adobe-flavored blockquotes into styled elements.
+      //
+      //   Alert types  >[!NOTE]           → <div class="extension note" …>…</div>
+      //   Shade boxes  >[!BEGINSHADEBOX]  → <div class="shadebox">…</div>
+      //   Tabs         >[!BEGINTABS]      → tab container (JS restructures DOM)
+      //   Video        >[!VIDEO](url)     → <div class="exl-video">…</div>
       const alertTypes: {[key: string]: {cls: string, label: string}} = {
         NOTE:           {cls: 'note',           label: 'NOTE'},
         TIP:            {cls: 'tip',            label: 'TIP'},
@@ -254,6 +299,7 @@ export function activate(context: ExtensionContext) {
         SUCCESS:        {cls: 'success',        label: 'SUCCESS'},
         MORELIKETHIS:   {cls: 'morelikethis',   label: 'More like this'},
       };
+
       md.core.ruler.push('adobe-alerts', function (state) {
         const tokens = state.tokens;
         // Iterate in reverse so splice offsets don't disturb earlier unprocessed indices.
@@ -272,36 +318,90 @@ export function activate(context: ExtensionContext) {
           }
           if (closeIdx < 0) { continue; }
 
-          // Inspect the first inline token inside the blockquote for [!TYPE].
-          let alertType: {cls: string, label: string} | null = null;
-          let typeParaOpen = -1;
-          let typeParaClose = -1;
+          // Get the first inline token inside the blockquote and its surrounding paragraph.
+          let firstInlineIdx = -1;
+          let typeParaOpen   = -1;
+          let typeParaClose  = -1;
           for (let j = i + 1; j < closeIdx; j++) {
             if (tokens[j].type !== 'inline') { continue; }
-            const m = /^\[!([\w]+)\]\s*$/.exec(tokens[j].content.trim());
-            if (m && alertTypes[m[1]]) {
-              alertType = alertTypes[m[1]];
-              if (tokens[j - 1]?.type === 'paragraph_open') { typeParaOpen = j - 1; }
-              if (tokens[j + 1]?.type === 'paragraph_close') { typeParaClose = j + 1; }
+            firstInlineIdx = j;
+            if (tokens[j - 1]?.type === 'paragraph_open')  { typeParaOpen  = j - 1; }
+            if (tokens[j + 1]?.type === 'paragraph_close') { typeParaClose = j + 1; }
+            break; // Only inspect the first inline token.
+          }
+          if (firstInlineIdx < 0) { continue; }
+
+          const raw = tokens[firstInlineIdx].content.trim();
+
+          // Replace blockquote tokens with raw HTML.
+          // Order matters: set closeIdx first (highest index), splice middle, set i last.
+          const apply = (openHtml: string, closeHtml: string) => {
+            tokens[closeIdx].type = 'html_block';
+            tokens[closeIdx].content = closeHtml;
+            tokens[closeIdx].tag = '';
+            if (typeParaOpen >= 0 && typeParaClose >= 0) {
+              tokens.splice(typeParaOpen, typeParaClose - typeParaOpen + 1);
             }
-            break; // Only check the first inline token.
+            tokens[i].type = 'html_block';
+            tokens[i].content = openHtml;
+            tokens[i].tag = '';
+          };
+
+          // ─── Standard alert types (NOTE, TIP, IMPORTANT, …) ───────────────
+          let m: RegExpExecArray | null;
+          m = /^\[!([\w]+)\]\s*$/.exec(raw);
+          if (m && alertTypes[m[1]]) {
+            const at = alertTypes[m[1]];
+            apply(`<div class="extension ${at.cls}" data-label="${at.label}">`, '</div>');
+            continue;
           }
-          if (!alertType) { continue; }
 
-          // Replace blockquote_close first (highest index — safe to modify first).
-          tokens[closeIdx].type = 'html_block';
-          tokens[closeIdx].content = '</div>';
-          tokens[closeIdx].tag = '';
-
-          // Remove the [!TYPE] paragraph (paragraph_open + inline + paragraph_close).
-          if (typeParaOpen >= 0 && typeParaClose >= 0) {
-            tokens.splice(typeParaOpen, typeParaClose - typeParaOpen + 1);
+          // ─── BEGINSHADEBOX ────────────────────────────────────────────────
+          m = /^\[!BEGINSHADEBOX(?:\s+"([^"]*)")?\]\s*$/.exec(raw);
+          if (m) {
+            const title = m[1];
+            const titleHtml = title ? `<p class="shadebox-title">${esc(title)}</p>\n` : '';
+            apply(`<div class="shadebox">\n${titleHtml}`, '');
+            continue;
           }
 
-          // Replace blockquote_open with the opening div (data-label drives the ::before label).
-          tokens[i].type = 'html_block';
-          tokens[i].content = `<div class="extension ${alertType.cls}" data-label="${alertType.label}">`;
-          tokens[i].tag = '';
+          // ─── ENDSHADEBOX ──────────────────────────────────────────────────
+          if (/^\[!ENDSHADEBOX\]\s*$/.test(raw)) {
+            apply('', '</div>\n');
+            continue;
+          }
+
+          // ─── BEGINTABS ────────────────────────────────────────────────────
+          // Emits an open container div; JS in prism-init.js restructures contents
+          // into labelled tab panels after the preview renders.
+          if (/^\[!BEGINTABS\]\s*$/.test(raw)) {
+            apply('<div class="exl-tabs">\n', '');
+            continue;
+          }
+
+          // ─── TAB ──────────────────────────────────────────────────────────
+          m = /^\[!TAB\s+([^\]]+)\]\s*$/.exec(raw);
+          if (m) {
+            apply(`<div class="exl-tab-start" data-title="${esc(m[1].trim())}"></div>\n`, '');
+            continue;
+          }
+
+          // ─── ENDTABS ──────────────────────────────────────────────────────
+          if (/^\[!ENDTABS\]\s*$/.test(raw)) {
+            apply('<div class="exl-tab-end"></div>\n', '</div>\n');
+            continue;
+          }
+
+          // ─── VIDEO ────────────────────────────────────────────────────────
+          m = /^\[!VIDEO\]\(([^)]+)\)\s*$/.exec(raw);
+          if (m) {
+            const url = m[1].replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+            apply(
+              `<div class="exl-video"><a class="exl-video-link" href="${url}" target="_blank">▶ Watch video</a></div>\n`,
+              ''
+            );
+            continue;
+          }
         }
       });
 
@@ -352,6 +452,23 @@ export function activate(context: ExtensionContext) {
         state.line = closeIdx + 1;
         return true;
       }, { alt: ['paragraph', 'reference'] });
+
+      // Strip standalone EXL attribute blocks: {style="..."}, {line-numbers="true"}, etc.
+      // These appear as lone paragraphs after code fences and tables and have no meaning
+      // in VS Code preview — they are publishing directives for the EXL build system.
+      md.core.ruler.push('strip_attr_blocks', (state: any) => {
+        const tokens = state.tokens;
+        for (let i = tokens.length - 3; i >= 0; i--) {
+          if (
+            tokens[i].type     === 'paragraph_open'  &&
+            tokens[i + 1].type === 'inline'           &&
+            tokens[i + 2].type === 'paragraph_close'  &&
+            /^\{[^}]*\}\s*$/.test(tokens[i + 1].content.trim())
+          ) {
+            tokens.splice(i, 3);
+          }
+        }
+      });
 
       return md;
     },

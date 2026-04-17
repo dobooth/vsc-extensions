@@ -189,7 +189,7 @@
 
 /* ─── Alert label — driven by data-label attribute ───────────────────────── */
 .extension[data-label]::before {
-  content: attr(data-label);
+  content: "ℹ\00a0" attr(data-label);
   display: block;
   font-size: 0.6875rem;
   font-weight: 700;
@@ -265,35 +265,35 @@
   background-color: var(--adobe-color-notice-bg);
   border-left-color: var(--adobe-color-notice-border);
 }
-.extension.important::before { color: var(--adobe-color-notice); }
+.extension.important::before { content: "⚠\00a0" attr(data-label); color: var(--adobe-color-notice); }
 
 /* ─── WARNING ────────────────────────────────────────────────────────────── */
 .extension.warning {
   background-color: var(--adobe-color-negative-bg);
   border-left-color: var(--adobe-color-negative-border);
 }
-.extension.warning::before { color: var(--adobe-color-negative); }
+.extension.warning::before { content: "⚠\00a0" attr(data-label); color: var(--adobe-color-negative); }
 
 /* ─── CAUTION ────────────────────────────────────────────────────────────── */
 .extension.caution {
   background-color: var(--adobe-color-negative-bg);
   border-left-color: var(--adobe-color-negative-border);
 }
-.extension.caution::before { color: var(--adobe-color-negative); }
+.extension.caution::before { content: "⚠\00a0" attr(data-label); color: var(--adobe-color-negative); }
 
 /* ─── ERROR ──────────────────────────────────────────────────────────────── */
 .extension.error {
   background-color: var(--adobe-color-negative-bg);
   border-left-color: var(--adobe-color-negative-border);
 }
-.extension.error::before { color: var(--adobe-color-negative); }
+.extension.error::before { content: "⚠\00a0" attr(data-label); color: var(--adobe-color-negative); }
 
 /* ─── SUCCESS ────────────────────────────────────────────────────────────── */
 .extension.success {
   background-color: var(--adobe-color-positive-bg);
   border-left-color: var(--adobe-color-positive-border);
 }
-.extension.success::before { color: var(--adobe-color-positive); }
+.extension.success::before { content: "✓\00a0" attr(data-label); color: var(--adobe-color-positive); }
 
 /* ─── MORELIKETHIS ───────────────────────────────────────────────────────── */
 .extension.morelikethis {
@@ -303,6 +303,122 @@
 .extension.morelikethis::before {
   color: #555;
   text-transform: none;   /* "More like this" — mixed case intentional */
+}
+
+/* ─── Shade boxes (>[!BEGINSHADEBOX] / >[!ENDSHADEBOX]) ──────────────────── */
+.vscode-body .shadebox {
+  background-color: #f8f8f8;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+}
+.vscode-body .shadebox .shadebox-title {
+  font-weight: 700;
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  color: #222;
+}
+
+/* ─── Badges ([!BADGE text]{type=…}) ─────────────────────────────────────── */
+.vscode-body .exl-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.25em 0.55em;
+  border-radius: 3px;
+  text-decoration: none;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.vscode-body .badge-informative {
+  background-color: var(--adobe-color-informative-bg);
+  color: var(--adobe-color-informative);
+  border: 1px solid var(--adobe-color-informative-border);
+}
+.vscode-body .badge-positive {
+  background-color: var(--adobe-color-positive-bg);
+  color: var(--adobe-color-positive);
+  border: 1px solid var(--adobe-color-positive-border);
+}
+.vscode-body .badge-negative {
+  background-color: var(--adobe-color-negative-bg);
+  color: var(--adobe-color-negative);
+  border: 1px solid var(--adobe-color-negative-border);
+}
+.vscode-body .badge-neutral {
+  background-color: #f5f5f5;
+  color: #444;
+  border: 1px solid #999;
+}
+.vscode-body .badge-caution {
+  background-color: var(--adobe-color-notice-bg);
+  color: var(--adobe-color-notice);
+  border: 1px solid var(--adobe-color-notice-border);
+}
+
+/* ─── Tabs (>[!BEGINTABS] / >[!TAB] / >[!ENDTABS]) ──────────────────────── */
+/* Initial state hides markers; JS in prism-init.js restructures into panels  */
+.vscode-body .exl-tabs {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin: 1.25rem 0;
+  overflow: hidden;
+}
+.vscode-body .exl-tab-start,
+.vscode-body .exl-tab-end {
+  display: none; /* Hidden until JS restructures the DOM */
+}
+.vscode-body .exl-tab-labels {
+  display: flex;
+  flex-wrap: wrap;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+}
+.vscode-body .exl-tab-label {
+  padding: 0.5rem 1.25rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: #555;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.1s;
+}
+.vscode-body .exl-tab-label:hover { color: #0268e3; }
+.vscode-body .exl-tab-label.active {
+  color: #0268e3;
+  border-bottom-color: #0268e3;
+  background-color: #fff;
+  font-weight: 600;
+}
+.vscode-body .exl-tab-panel {
+  display: none;
+  padding: 1rem 1.25rem;
+}
+.vscode-body .exl-tab-panel.active { display: block; }
+
+/* ─── Video (>[!VIDEO](url)) ─────────────────────────────────────────────── */
+.vscode-body .exl-video {
+  margin: 1rem 0;
+}
+.vscode-body .exl-video-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #0268e3;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #0268e3;
+  border-radius: 4px;
+}
+.vscode-body .exl-video-link:hover {
+  background-color: #EBF3FF;
+  text-decoration: none;
 }
 
 /* ─── Collapsible sections (+++ syntax) ──────────────────────────────────── */

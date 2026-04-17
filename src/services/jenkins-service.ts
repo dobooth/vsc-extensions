@@ -255,17 +255,22 @@ export function evaluateFix(repoRoot: string, target: string): { fixStatus: Buil
 export async function getRepofixesData(config: JenkinsConfig): Promise<{
   futureErrors: FutureError[];
   linkErrors: LinkError[];
+  reportTimestamp: number | null;
 }> {
   const tmpDir = path.join(os.tmpdir(), `jenkins-${config.repoSlug}`);
   fs.mkdirSync(tmpDir, { recursive: true });
 
-  const [futureBody, linkBody] = await Promise.allSettled([
+  const [futureBody, linkBody, tsBody] = await Promise.allSettled([
     httpsGet(
       `${config.baseUrl}/view/Reporting/job/FutureErrorsCheckExl/lastSuccessfulBuild/artifact/futureErrors.json`,
       config.authHeader
     ),
     httpsGet(
       `${config.baseUrl}/view/Reporting/job/LinkCheckExl/lastSuccessfulBuild/artifact/${config.repoSlug}.csv`,
+      config.authHeader
+    ),
+    httpsGet(
+      `${config.baseUrl}/view/Reporting/job/LinkCheckExl/lastSuccessfulBuild/api/json?tree=timestamp`,
       config.authHeader
     ),
   ]);
@@ -306,7 +311,12 @@ export async function getRepofixesData(config: JenkinsConfig): Promise<{
     } catch { /* ignore */ }
   }
 
-  return { futureErrors, linkErrors };
+  let reportTimestamp: number | null = null;
+  if (tsBody.status === 'fulfilled') {
+    try { reportTimestamp = JSON.parse(tsBody.value).timestamp ?? null; } catch { /* ignore */ }
+  }
+
+  return { futureErrors, linkErrors, reportTimestamp };
 }
 
 export async function pollBuildByNumber(config: JenkinsConfig, buildNum: number): Promise<{

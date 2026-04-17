@@ -10,9 +10,14 @@ Renders EXL-specific Markdown extensions in the VS Code preview panel:
 
 - Alert blocks: `>[!NOTE]`, `>[!TIP]`, `>[!IMPORTANT]`, `>[!WARNING]`, `>[!CAUTION]`, and more
 - Shade boxes: `>[!BEGINSHADEBOX]` / `>[!ENDSHADEBOX]`
+- Tabs: `>[!BEGINTABS]` / `>[!TAB Label]` / `>[!ENDTABS]`
 - Collapsible sections: `+++Title` / `+++`
 - Embedded video: `>[!VIDEO](url)`
+- Inline badges: `[!BADGE Label]{type=Informative}`
 - Localization macros: `[!DNL product]`, `[!UICONTROL label]`
+- Prism syntax highlighting for code blocks (JavaScript, TypeScript, JSON, Bash, Python, SQL, YAML, and more)
+
+**To see all supported syntax in action:** open [preview-test.md](preview-test.md) and run **Markdown: Open Preview to the Side** (`Ctrl+K V`).
 
 ### Jenkins Build Monitor
 
@@ -67,6 +72,6 @@ Requires VS Code 1.44.0 or higher.
 
 ## More information
 
-- [Adobe Contributor Guide](https://experienceleague.adobe.com/docs/contributor/contributor-guide/introduction.html)
-- [Adobe Markdown Syntax Style Guide](https://experienceleague.adobe.com/docs/contributor/contributor-guide/writing-essentials/markdown.html)
+- [Adobe Contributor Guide](https://experienceleague.adobe.com/en/docs/contributor/contributor-guide/introduction)
+- [Adobe Markdown Syntax Style Guide](https://experienceleague.adobe.com/en/docs/contributor/contributor-guide/writing-essentials/markdown)
 - [markdownlint](https://github.com/DavidAnson/markdownlint)

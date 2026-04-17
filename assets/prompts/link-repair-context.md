@@ -84,6 +84,15 @@ Base marketo-apis URLs without any fragment redirect through the SPA root (`#`).
 source file has these without a trailing slash and without a fragment, they are already in
 the correct form — mark skip with reason "false positive, file already correct".
 
+### 6. Known false positives — domains that block automated link checkers
+
+These domains return 403/gateway errors to the Jenkins link checker but are valid URLs.
+Mark them skip with reason "false positive — host blocks automated checkers":
+
+- `developer.apple.com` — Apple blocks automated HTTP requests with a gateway error
+- `docs.microsoft.com` / `learn.microsoft.com` — Microsoft throttles automated checkers
+- `linkedin.com` — blocks crawlers entirely
+
 ---
 
 ## De-linking broken references

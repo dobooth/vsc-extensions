@@ -18,7 +18,11 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
   private _config: JenkinsConfig | null = null;
   private _cwd: string;
-  private _lastRepofixes: { futureErrors: any[]; linkErrors: any[] } | null = null;
+  private _lastRepofixes: { futureErrors: any[]; linkErrors: any[]; reportTimestamp: number | null } | null = null;
+  private _repoRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+  private _buildRunning = false;
+  private _otherIssueCount = 0;
+  private _dataLoaded = false;
 
   constructor(private readonly _context: vscode.ExtensionContext) {
     this._cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
@@ -30,13 +34,16 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
     _token: vscode.CancellationToken
   ): void {
     this._view = webviewView;
-    webviewView.webview.options = { enableScripts: true };
-    (webviewView as any).retainContextWhenHidden = true;
-    webviewView.webview.html = this._getHtml();
+    const mediaUri = vscode.Uri.joinPath(this._context.extensionUri, 'media');
+    webviewView.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [mediaUri],
+    };
+    webviewView.webview.html = this._getHtml(webviewView.webview);
 
     webviewView.webview.onDidReceiveMessage(async (msg) => {
       switch (msg.command) {
-        case 'refresh': await this._handleRefresh(); break;
+        case 'refresh': output.appendLine('[Jenkins] Refresh command received'); await this._handleRefresh(); break;
         case 'mergePush': await this._handleMergePush(); break;
         case 'autoFix': await this._handleAutoFix(); break;
         case 'repofixes': await this._handleRepofixes(); break;
@@ -82,6 +89,24 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
 
   private _otherError(text: string): void {
     this._post('otherLog', { text, isError: true });
+  }
+
+  private _actionResult(file: string, type: 'fix' | 'notfound' | 'skip' | 'note', find?: string, reason?: string): void {
+    this._post('actionResult', { file: file.replace(/^\//, ''), type, find: find?.slice(0, 80), reason });
+  }
+
+  private _updateBadge(): void {
+    if (!this._view || !this._dataLoaded) { return; }
+    const count = this._otherIssueCount;
+    this._view.title = count > 0 ? `Build Monitor (${count})` : 'Build Monitor';
+    if (this._buildRunning && count === 0) {
+      this._view.badge = { value: 1, tooltip: 'Build running…' };
+    } else if (count > 0) {
+      const prefix = this._buildRunning ? 'Build running · ' : '';
+      this._view.badge = { value: count, tooltip: prefix + count + ' link issues need attention' };
+    } else {
+      this._view.badge = undefined;
+    }
   }
 
   // ── Config / workspace ────────────────────────────────────────────────────
@@ -132,54 +157,64 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
 
   private async _handleRefresh(): Promise<void> {
     this._setLoading(true);
-    const cfg = await this._loadConfig();
-    if (!cfg) { this._setLoading(false); return; }
+    try {
+      const cfg = await this._loadConfig();
+      if (!cfg) { return; }
 
-    const ok = await testConnectivity(cfg);
-    if (!ok) {
-      output.appendLine(`[Jenkins] Connectivity test failed for ${cfg.baseUrl}`);
-      this._post('banner', { text: 'Cannot reach Jenkins — check VPN and credentials. Click ↻ to retry.' });
+      const ok = await testConnectivity(cfg);
+      if (!ok) {
+        output.appendLine(`[Jenkins] Connectivity test failed for ${cfg.baseUrl}`);
+        this._post('banner', { text: 'Cannot reach Jenkins — check VPN and credentials. Click ↻ to retry.' });
+        return;
+      }
+      output.appendLine(`[Jenkins] Connected to ${cfg.baseUrl}`);
+      this._post('banner', { text: '' });
+
+      const prodCfg = { ...cfg, jobName: cfg.prodJobName };
+      const [history, queue, buildNums, prodHistory, prodQueue, prodBuildNums, repofixes] = await Promise.all([
+        getBuildHistory(cfg),
+        getQueueItem(cfg),
+        getLastBuildNums(cfg),
+        getBuildHistory(prodCfg),
+        getQueueItem(prodCfg),
+        getLastBuildNums(prodCfg),
+        getRepofixesData(cfg),
+      ]);
+
+      const [summary, prodSummary] = await Promise.all([
+        buildNums.lastFailed ? getBuildSummary(cfg, buildNums.lastFailed, cfg.repoRoot) : Promise.resolve(null),
+        prodBuildNums.lastFailed ? getBuildSummary(prodCfg, prodBuildNums.lastFailed, cfg.repoRoot) : Promise.resolve(null),
+      ]);
+
+      this._lastRepofixes = repofixes;
+      this._annotateRepofixes(repofixes, cfg.repoRoot);
+      this._scheduleRepoRefresh(repofixes.reportTimestamp);
+      this._otherIssueCount = repofixes.linkErrors.filter((e: any) => !e.alreadyFixed && !e.falsePositive).length
+        + repofixes.futureErrors.filter((e: any) => !e.alreadyFixed && !e.falsePositive).length;
+      this._dataLoaded = true;
+      this._updateBadge();
+
+      this._post('statusData', {
+        repo: cfg.repoSlug,
+        branch: cfg.currentBranch,
+        history,
+        queue,
+        lastFailed: buildNums.lastFailed,
+        lastSuccess: buildNums.lastSuccess,
+        summary,
+        prodHistory,
+        prodQueue,
+        prodSummary,
+      });
+      output.appendLine(`[Jenkins] statusData posted: history=${history.length}, prodHistory=${prodHistory.length}`);
+      this._post('repofixesData', repofixes);
+      output.appendLine(`[Jenkins] repofixesData posted: future=${repofixes.futureErrors.length}, link=${repofixes.linkErrors.length}`);
+    } catch (e: any) {
+      output.appendLine(`[Jenkins] Refresh error: ${e.message}`);
+      this._post('banner', { text: `Refresh failed: ${e.message}` });
+    } finally {
       this._setLoading(false);
-      return;
     }
-    output.appendLine(`[Jenkins] Connected to ${cfg.baseUrl}`);
-    this._post('banner', { text: '' }); // clear any previous error
-
-    // Fetch review, prod, and other errors data all in parallel
-    const prodCfg = { ...cfg, jobName: cfg.prodJobName };
-    const [history, queue, buildNums, prodHistory, prodQueue, prodBuildNums, repofixes] = await Promise.all([
-      getBuildHistory(cfg),
-      getQueueItem(cfg),
-      getLastBuildNums(cfg),
-      getBuildHistory(prodCfg),
-      getQueueItem(prodCfg),
-      getLastBuildNums(prodCfg),
-      getRepofixesData(cfg),
-    ]);
-
-    const [summary, prodSummary] = await Promise.all([
-      buildNums.lastFailed ? getBuildSummary(cfg, buildNums.lastFailed, cfg.repoRoot) : Promise.resolve(null),
-      prodBuildNums.lastFailed ? getBuildSummary(prodCfg, prodBuildNums.lastFailed, cfg.repoRoot) : Promise.resolve(null),
-    ]);
-
-    this._lastRepofixes = repofixes;
-    this._annotateRepofixes(repofixes, cfg.repoRoot);
-
-    this._post('statusData', {
-      repo: cfg.repoSlug,
-      branch: cfg.currentBranch,
-      history,
-      queue,
-      lastFailed: buildNums.lastFailed,
-      lastSuccess: buildNums.lastSuccess,
-      summary,
-      prodHistory,
-      prodQueue,
-      prodSummary,
-    });
-    this._post('repofixesData', repofixes);
-
-    this._setLoading(false);
   }
 
   private async _handleMergePush(): Promise<void> {
@@ -240,6 +275,8 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
 
     this._log(`Build #${buildNum} started. Monitoring...`);
     this._post('buildStarted', { buildNum });
+    this._buildRunning = true;
+    this._updateBadge();
 
     // Get ETA estimate from history
     const history = await getBuildHistory(cfg);
@@ -263,11 +300,15 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
         const result = info.result ?? 'UNKNOWN';
         this._log(`Build #${buildNum} ${result}`);
         this._post('buildDone', { buildNum, result });
+        this._buildRunning = false;
+        this._updateBadge();
         // Refresh status panel
         await this._handleRefresh();
         return;
       }
     }
+    this._buildRunning = false;
+    this._updateBadge();
     this._error('Build timed out after 20 minutes.');
   }
 
@@ -345,7 +386,7 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
     this._error(`Could not fix build after ${MAX_ITER} attempts. Manual intervention needed.`);
   }
 
-  private _annotateRepofixes(repofixes: { futureErrors: any[]; linkErrors: any[] }, repoRoot: string): void {
+  private _annotateRepofixes(repofixes: { futureErrors: any[]; linkErrors: any[]; reportTimestamp?: number | null }, repoRoot: string): void {
     const fileCache = new Map<string, string>();
     const read = (file: string): string => {
       if (!fileCache.has(file)) {
@@ -355,27 +396,62 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
       return fileCache.get(file)!;
     };
 
+    const GATEWAY_DOMAINS = new Set(['developer.apple.com', 'docs.microsoft.com', 'learn.microsoft.com', 'linkedin.com']);
+
+    const urlPresent = (content: string, url: string) => {
+      // Match url only when followed by a link terminator, not more URL chars like # or /
+      const escaped = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return new RegExp(escaped + '[)"\'\\s]').test(content);
+    };
     for (const e of repofixes.linkErrors) {
-      if (e.url) { e.alreadyFixed = !read(e.file).includes(e.url); }
+      if (e.url) {
+        try {
+          const host = new URL(e.url).hostname;
+          if (GATEWAY_DOMAINS.has(host)) { e.falsePositive = true; continue; }
+        } catch { /* invalid URL — fall through */ }
+        e.alreadyFixed = !urlPresent(read(e.file), e.url);
+      }
     }
     for (const e of repofixes.futureErrors) {
       const urlMatch = e.description?.match(/https?:\/\/\S+/);
       const needle = urlMatch?.[0];
-      if (needle) { e.alreadyFixed = !read(e.file).includes(needle); }
+      if (needle) { e.alreadyFixed = !urlPresent(read(e.file), needle); }
     }
   }
 
-  private async _handleRepofixes(): Promise<void> {
+  private async _handleRepofixes(silent = false): Promise<void> {
     const cfg = await this._loadConfig();
     if (!cfg) { return; }
 
-    this._post('switchTab', { tab: 'othererrors' });
-    this._log('Fetching other errors...');
+    if (!silent) {
+      this._post('switchTab', { tab: 'othererrors' });
+    }
 
-    const { futureErrors, linkErrors } = await getRepofixesData(cfg);
-    this._lastRepofixes = { futureErrors, linkErrors };
+    const { futureErrors, linkErrors, reportTimestamp } = await getRepofixesData(cfg);
+    const prevTimestamp = this._lastRepofixes?.reportTimestamp ?? null;
+    this._lastRepofixes = { futureErrors, linkErrors, reportTimestamp };
     this._annotateRepofixes(this._lastRepofixes, cfg.repoRoot);
-    this._post('repofixesData', { futureErrors, linkErrors });
+    this._otherIssueCount = linkErrors.filter((e: any) => !e.alreadyFixed && !e.falsePositive).length
+      + futureErrors.filter((e: any) => !e.alreadyFixed && !e.falsePositive).length;
+    this._updateBadge();
+    this._post('repofixesData', { futureErrors, linkErrors, reportTimestamp, isNew: !!(reportTimestamp && prevTimestamp && reportTimestamp > prevTimestamp) });
+    this._scheduleRepoRefresh(reportTimestamp);
+  }
+
+  /** Schedule a silent re-fetch ~10 min after the next expected 4-hour report tick. */
+  private _scheduleRepoRefresh(reportTimestamp: number | null): void {
+    if (this._repoRefreshTimer) { clearTimeout(this._repoRefreshTimer); this._repoRefreshTimer = null; }
+    if (!reportTimestamp) { return; }
+
+    const INTERVAL_MS = 4 * 60 * 60 * 1000;
+    const BUILD_BUFFER_MS = 10 * 60 * 1000; // 10 min for build to finish
+    const ageMs = Date.now() - reportTimestamp;
+    const msUntilNext = INTERVAL_MS - (ageMs % INTERVAL_MS) + BUILD_BUFFER_MS;
+
+    this._repoRefreshTimer = setTimeout(async () => {
+      this._repoRefreshTimer = null;
+      await this._handleRepofixes(true);
+    }, msUntilNext);
   }
 
   private async _handleApplyFixes(): Promise<void> {
@@ -400,7 +476,6 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
       this._otherLog('Note: working tree has uncommitted changes — fixes will be added on top.');
     }
 
-    this._otherLog(`Branch: ${status.branch}  Root: ${cfg.repoRoot}`);
 
     // ── AI client — prefer Claude (Anthropic), fall back to OpenAI ──────
     const claudeKey = await this._context.secrets.get(ANTHROPIC_KEY_SECRET);
@@ -412,7 +487,6 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
     const repairContext = loadRepairContext(this._context.extensionPath);
 
     const { futureErrors, linkErrors } = this._lastRepofixes;
-    this._otherLog(`${futureErrors.length} internal issue(s), ${linkErrors.length} external link error(s)`);
 
     // ── Group all errors by file and read file contents ───────────────────
     const byFile = new Map<string, { linkErrors: any[]; futureErrors: any[]; lines: string[] }>();
@@ -433,7 +507,7 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
 
       if (linkErrors.includes(e)) {
         if (e.url && !fileText.includes(e.url)) {
-          this._otherLog(`  ✓ already fixed: ${e.file} — ${e.url.slice(0, 60)}`);
+          // already fixed — shown in list with Fixed Locally badge
         } else {
           entry.linkErrors.push(e);
         }
@@ -441,7 +515,7 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
         const urlMatch = e.description?.match(/https?:\/\/\S+/);
         const needle = urlMatch?.[0];
         if (needle && !fileText.includes(needle)) {
-          this._otherLog(`  ✓ already fixed: ${e.file} — ${needle.slice(0, 60)}`);
+          // already fixed — shown in list with Fixed Locally badge
         } else {
           entry.futureErrors.push(e);
         }
@@ -457,6 +531,64 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
 
     if (byFile.size === 0) {
       this._otherLog('All errors already fixed locally — nothing to send to AI.');
+      return;
+    }
+
+    // ── Programmatic pre-pass: trailing slash and #operation/ fixes ───────────
+    const fileContentsEarly = new Map(Array.from(byFile.entries()).map(([k, v]) => [k, v.lines.join('\n')]));
+    const fileChangedEarly = new Set<string>();
+    for (const [relFile, entry] of byFile) {
+      let content = fileContentsEarly.get(relFile)!;
+      const toRemove: any[] = [];
+      for (const e of entry.linkErrors) {
+        if (!e.url) { continue; }
+        const url: string = e.url;
+        // Trailing slash removal
+        if (url.endsWith('/') && content.includes(url)) {
+          const fixed = url.slice(0, -1);
+          content = content.split(url).join(fixed);
+          fileContentsEarly.set(relFile, content);
+          fileChangedEarly.add(relFile);
+          this._actionResult(relFile, 'fix', url);
+          toRemove.push(e);
+        // Old Redocly #operation/ → #
+        } else if (url.includes('#operation/') && content.includes(url)) {
+          const fixed = url.replace(/#operation\/.*$/, '#');
+          content = content.split(url).join(fixed);
+          fileContentsEarly.set(relFile, content);
+          fileChangedEarly.add(relFile);
+          this._actionResult(relFile, 'fix', url);
+          toRemove.push(e);
+        }
+      }
+      for (const e of toRemove) {
+        entry.linkErrors.splice(entry.linkErrors.indexOf(e), 1);
+      }
+    }
+    // Write early fixes now
+    for (const relFile of fileChangedEarly) {
+      const absFile = path.join(cfg.repoRoot, relFile.replace(/^\//, ''));
+      try {
+        require('fs').writeFileSync(absFile, fileContentsEarly.get(relFile)!, 'utf8');
+      } catch (e: any) {
+        this._otherError(`Write failed for ${relFile}: ${e.message}`);
+      }
+    }
+    if (fileChangedEarly.size > 0) {
+      this._otherLog(`Auto-fixed ${fileChangedEarly.size} file(s) (trailing slash / #operation/).`);
+    }
+
+    // Remove files that no longer have any errors after programmatic pass
+    for (const [file, entry] of byFile) {
+      if (entry.linkErrors.length === 0 && entry.futureErrors.length === 0) {
+        byFile.delete(file);
+      }
+    }
+
+    if (byFile.size === 0) {
+      this._post('fixDone', { changed: Array.from(fileChangedEarly).map(f => f.replace(/^\//, '')) });
+      this._otherLog('All errors resolved without AI.');
+      if (fileChangedEarly.size > 0) { this._otherLog('Review with git diff before committing.'); }
       return;
     }
 
@@ -516,7 +648,8 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
       `{"action":"skip","file":"<repo-relative path>","reason":"<why no fix>"}\n` +
       `{"action":"note","file":"<repo-relative path>","text":"<related observation>"}\n\n` +
       `Rules:\n` +
-      `- "find" must be the exact string as it appears in the file\n` +
+      `- "find" must be the exact string as it appears in the file — do NOT include the line-number prefix shown in snippets (e.g. "42: ...")\n` +
+      `- For URL-only fixes, "find" should be just the URL string itself, not the surrounding Markdown\n` +
       `- Fix broken external links: remove trailing slashes, update old Redocly #operation/ paths to #\n` +
       `- De-link truly broken references: keep the link text, remove the [...](url) wrapper\n` +
       `- Do not change correct links — mark them skip with reason "false positive"\n` +
@@ -531,14 +664,16 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
     const fileContents = new Map(Array.from(byFile.entries()).map(([k, v]) => [k, v.lines.join('\n')]));
     const fileChanged = new Set<string>();
     let lineBuffer = '';
+    let rawResponse = '';
     let aiError: string | null = null;
     let firstChunk = true;
     let actionCount = 0;
 
     this._otherLog(`Sending ${byFile.size} file(s) to AI…`);
+    this._post('fixFilesStarting', { files: Array.from(byFile.keys()).map(f => f.replace(/^\//, '')) });
 
     const slowTimer = setTimeout(() => {
-      if (firstChunk) { this._otherLog('  Still waiting for response…'); }
+      if (firstChunk) { this._otherLog('Still waiting for response…'); }
     }, 15000);
 
     try {
@@ -546,10 +681,11 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
         if (firstChunk) {
           firstChunk = false;
           clearTimeout(slowTimer);
-          this._otherLog('  Response streaming…');
+          this._otherLog('Response streaming…');
         }
 
         lineBuffer += chunk;
+        rawResponse += chunk;
         const lines = lineBuffer.split('\n');
         lineBuffer = lines.pop() ?? '';
 
@@ -568,14 +704,14 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
                 content = content.split(action.find).join(action.replace);
                 fileContents.set(file, content);
                 fileChanged.add(file);
-                this._otherLog(`  ✓ [${file}] ${action.find.slice(0, 50)}${action.find.length > 50 ? '…' : ''}`);
+                this._actionResult(file, 'fix', action.find);
               } else {
-                this._otherLog(`  ✗ [${file}] Not found: ${action.find.slice(0, 50)}${action.find.length > 50 ? '…' : ''}`);
+                this._actionResult(file, 'notfound', action.find);
               }
             } else if (action.action === 'skip') {
-              this._otherLog(`  · [${file}] skip: ${action.reason}`);
+              this._actionResult(file, 'skip', undefined, action.reason);
             } else if (action.action === 'note') {
-              this._otherLog(`  ℹ [${file}] ${action.text}`);
+              this._actionResult(file, 'note', undefined, action.text);
             }
           } catch { /* incomplete JSON — ignore */ }
         }
@@ -588,7 +724,8 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
     }
 
     if (!aiError && actionCount === 0) {
-      this._otherLog('  No actions returned — response may not be valid NDJSON.');
+      output.appendLine('[ApplyFixes] Raw AI response:\n' + rawResponse.slice(0, 2000));
+      this._otherLog('No actions returned — response may not be valid NDJSON.');
     }
 
     // ── Write changed files ────────────────────────────────────────────────
@@ -598,20 +735,20 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
       const absFile = path.join(cfg.repoRoot, relFile.replace(/^\//, ''));
       try {
         require('fs').writeFileSync(absFile, fileContents.get(relFile)!, 'utf8');
-        this._otherLog(`  saved: ${relFile}`);
         totalChanged++;
       } catch (e: any) {
-        this._otherError(`  Write failed for ${relFile}: ${e.message}`);
+        this._otherError(`Write failed for ${relFile}: ${e.message}`);
         totalFailed++;
       }
     }
 
-    // ── Summary ────────────────────────────────────────────────────────────
+    // ── Finalize cards and summary ─────────────────────────────────────────
+    this._post('fixDone', { changed: Array.from(fileChanged).map(f => f.replace(/^\//, '')) });
     const parts: string[] = [];
     if (totalChanged > 0) { parts.push(`${totalChanged} file(s) changed`); }
     if (totalFailed > 0) { parts.push(`${totalFailed} write error(s)`); }
     if (aiError) { parts.push('AI error — partial results only'); }
-    this._otherLog(`\n${parts.length ? parts.join(' · ') : 'No changes needed.'}`);
+    this._otherLog(parts.length ? parts.join(' · ') : 'No changes needed.');
     if (totalChanged > 0) { this._otherLog('Review with git diff before committing.'); }
   }
 
@@ -634,12 +771,17 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
 
   // ── HTML ──────────────────────────────────────────────────────────────────
 
-  private _getHtml(): string {
+  private _getHtml(webview: vscode.Webview): string {
+    const scriptUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this._context.extensionUri, 'media', 'panel.js')
+    );
+    const csp = webview.cspSource;
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src ${csp} 'unsafe-inline';">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -739,6 +881,51 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
     word-break: break-all;
   }
   .log-error { color: var(--vscode-terminal-ansiRed, #f44336); }
+  .report-status-card {
+    background: var(--vscode-sideBar-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 3px;
+    padding: 6px 8px;
+    margin-bottom: 8px;
+    font-size: 11px;
+  }
+  .report-status-row { display: flex; align-items: center; gap: 6px; }
+  .report-status-icon { font-size: 13px; line-height: 1; }
+  .report-status-text { font-weight: 600; flex: 1; }
+  .report-next-line { margin-top: 3px; font-size: 10px; color: var(--vscode-descriptionForeground); }
+  .btn-xs { font-size: 10px; padding: 1px 6px; }
+  .report-new-banner {
+    font-size: 11px;
+    background: var(--vscode-notificationCenterHeader-background, #1e5e1e);
+    color: var(--vscode-notificationCenterHeader-foreground, #c8e6c9);
+    padding: 4px 8px;
+    border-radius: 2px;
+    margin-bottom: 6px;
+  }
+  .other-status {
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    margin-bottom: 6px;
+    min-height: 16px;
+  }
+  .other-status .status-error { color: var(--vscode-errorForeground); }
+  .fix-card {
+    display: flex;
+    flex-direction: column;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    font-size: 11px;
+  }
+  .fix-card-row { display: flex; align-items: center; gap: 6px; }
+  .fix-card-icon { min-width: 14px; text-align: center; }
+  .fix-card-file { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--vscode-foreground); }
+  .fix-card-badge { font-size: 10px; padding: 1px 5px; border-radius: 2px; font-weight: 600; white-space: nowrap; }
+  .fix-card-badge-fixed { background: #1b5e20; color: #a5d6a7; }
+  .fix-card-badge-fail { background: #7f0000; color: #ffcdd2; }
+  .fix-card-badge-neutral { background: #37474f; color: #b0bec5; }
+  .fix-card-detail { margin-top: 3px; padding-left: 20px; color: var(--vscode-errorForeground); font-size: 10px; font-family: var(--vscode-editor-font-family); word-break: break-all; }
+  @keyframes spin2 { to { transform: rotate(360deg); } }
+  .fix-spinner { display: inline-block; width: 10px; height: 10px; border: 2px solid var(--vscode-descriptionForeground); border-top-color: transparent; border-radius: 50%; animation: spin2 0.8s linear infinite; vertical-align: middle; }
   .progress-bar { height: 3px; background: var(--vscode-panel-border); border-radius: 2px; margin: 4px 0; overflow: hidden; }
   .progress-fill { height: 100%; background: var(--vscode-progressBar-background); transition: width 1s; }
   .action-row { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
@@ -752,6 +939,7 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
   .bucket-fix { background: #0d47a1; color: #90caf9; }
   .bucket-manual { background: #37474f; color: #b0bec5; }
   .bucket-fixed { background: #1b5e20; color: #a5d6a7; }
+  .bucket-flagged { background: #4a148c; color: #ce93d8; }
   .eta-row { font-size: 11px; color: var(--vscode-descriptionForeground); margin: 4px 0; }
   .pipeline { margin-bottom: 8px; }
   .pipeline-step { display: flex; gap: 8px; align-items: flex-start; }
@@ -866,8 +1054,8 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
           <button class="btn" onclick="mergePush()">Single Fix Cycle</button>
           <button class="btn btn-secondary" onclick="autoFix()">⚙ Auto Fix</button>
         </div>
-        <div class="pipeline-desc"><b>Single Fix Cycle</b> merges to <code>review</code> and fixes build issues. Stops for manual check.</div>
-        <div class="pipeline-desc"><b>Auto Fix</b> reviews and fixes until the build passes.</div>
+        <div class="pipeline-desc"><b>Single Fix Cycle</b> merges to <code>review</code> and fixes build issues. Stops before commit.</div>
+        <div class="pipeline-desc"><b>Auto Fix</b> reviews and fixes and commits until passes.</div>
       </div>
     </div>
     <div class="pipeline-arrow">↓</div>
@@ -898,374 +1086,26 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
 
 <!-- ── Other Errors Tab ───────────────────────────────────────────────── -->
 <div class="tab-panel" id="tab-othererrors">
-  <div class="action-row">
-    <button class="btn" onclick="applyFixes()">⚡ Apply Fixes</button>
+  <div id="reportStatusCard" class="report-status-card" style="display:none">
+    <div class="report-status-row">
+      <span id="reportStatusIcon" class="report-status-icon">○</span>
+      <span id="reportStatusText" class="report-status-text"></span>
+      <button class="btn btn-secondary btn-xs" onclick="repofixes()" style="margin-left:auto">↻ Refresh</button>
+    </div>
+    <div id="reportNextLine" class="report-next-line"></div>
   </div>
-  <div id="otherLog" class="log-panel" style="display:none;margin-bottom:8px;height:130px"></div>
+  <div id="reportNewBanner" style="display:none" class="report-new-banner">New report available — list updated</div>
+  <div class="action-row" style="margin-top:6px">
+    <button class="btn" id="applyFixesBtn" onclick="applyFixes()">⚡ Apply Fixes</button>
+  </div>
+  <div id="otherStatus" class="other-status" style="display:none"></div>
+  <div id="fixCards" style="display:none;margin-bottom:8px"></div>
   <div id="repofixList"><span class="empty">Loading...</span></div>
 </div>
 
 </div> <!-- /mainPanel -->
 
-<script>
-  const vscode = acquireVsCodeApi();
-  let _tokenUrl = '';
-
-  function refresh() { vscode.postMessage({ command: 'refresh' }); }
-  function mergePush() { vscode.postMessage({ command: 'mergePush' }); }
-  function autoFix() { vscode.postMessage({ command: 'autoFix' }); }
-  function repofixes() { vscode.postMessage({ command: 'repofixes' }); }
-  function applyFixes() { vscode.postMessage({ command: 'applyFixes' }); }
-
-  function openTokenUrl() {
-    if (_tokenUrl) vscode.postMessage({ command: 'openUrl', url: _tokenUrl });
-  }
-
-  function openUrl(url) {
-    vscode.postMessage({ command: 'openUrl', url });
-  }
-
-  function submitCredentials() {
-    const token = document.getElementById('tokenInput').value.trim();
-    const claudeKey = document.getElementById('claudeKeyInput').value.trim();
-    const openAiKey = document.getElementById('openAiKeyInput').value.trim();
-    const err = document.getElementById('setupError');
-    if (!token) { err.textContent = 'Jenkins API token is required.'; err.style.display = 'block'; return; }
-    if (!claudeKey && !openAiKey) { err.textContent = 'At least one AI key (Claude or ChatGPT) is required.'; err.style.display = 'block'; return; }
-    err.style.display = 'none';
-    vscode.postMessage({ command: 'saveCredentials', token, claudeKey, openAiKey });
-  }
-
-  // Allow Enter key in any setup input to submit
-  ['tokenInput', 'claudeKeyInput', 'openAiKeyInput'].forEach(id => {
-    document.getElementById(id).addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') submitCredentials();
-    });
-  });
-
-  function switchTab(tab) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tab));
-  }
-
-  function formatDuration(ms) {
-    if (!ms) return '';
-    const s = Math.round(ms / 1000);
-    return s > 60 ? Math.floor(s / 60) + 'm ' + (s % 60) + 's' : s + 's';
-  }
-
-  function formatAgo(startTime) {
-    if (!startTime) return '';
-    const diff = Math.floor((Date.now() - new Date(startTime).getTime()) / 1000);
-    if (diff < 60) return diff + 's ago';
-    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-    return Math.floor(diff / 3600) + 'h ago';
-  }
-
-  function badgeClass(result, state) {
-    if (state === 'QUEUED') return 'badge-queued';
-    if (state === 'RUNNING') return 'badge-running';
-    if (result === 'SUCCESS') return 'badge-success';
-    if (result === 'FAILURE' || result === 'UNSTABLE') return 'badge-failure';
-    return 'badge-aborted';
-  }
-
-  function renderHistory(history, queue) {
-    if (!history || history.length === 0) {
-      return '<span class="empty">No build history.</span>';
-    }
-    let html = '';
-    if (queue) {
-      html += '<div class="build-row"><span class="build-num">—</span><span class="badge badge-queued">QUEUED</span><span class="build-meta">' + escHtml(queue.why) + '</span></div>';
-    }
-    for (const run of history) {
-      const result = run.result || (run.state === 'RUNNING' ? 'RUNNING' : 'ABORTED');
-      const bc = badgeClass(run.result, run.state);
-      html += '<div class="build-row">';
-      html += '<span class="build-num">#' + run.id + '</span>';
-      html += '<span class="badge ' + bc + '">' + result + '</span>';
-      html += '<span class="build-meta">' + formatAgo(run.startTime) + (run.durationInMillis ? ' · ' + formatDuration(run.durationInMillis) : '') + '</span>';
-      html += '</div>';
-    }
-    return html;
-  }
-
-  function renderErrors(summary) {
-    if (!summary || (!summary.errors.length && !summary.unparsed.length)) {
-      return '<span class="empty">No errors from recent builds.</span>';
-    }
-    let html = '<div style="font-size:11px;color:var(--vscode-descriptionForeground);margin-bottom:4px">Build #' + summary.buildNum + '</div>';
-
-    // Parsed link errors
-    for (const err of summary.errors) {
-      const rowClass = err.active ? 'error-row' : 'error-row resolved';
-      const checkmark = err.active ? '' : ' ✓';
-      html += '<div class="' + rowClass + '">';
-      html += '<span class="error-file open-file" data-file="' + escAttr(err.filepath) + '" data-line="' + err.lineno + '">' + escHtml(err.filepath) + ':' + err.lineno + checkmark + '</span> ';
-      html += '<span class="error-target">' + escHtml(err.target) + '</span>';
-      if (err.active) {
-        let fc = '';
-        if (err.fixStatus === 'path-fix') fc = '<span class="fix-badge fix-path">path fix</span>';
-        else if (err.fixStatus === 'delink') fc = '<span class="fix-badge fix-delink">de-link</span>';
-        else if (err.fixStatus === 'ambiguous') fc = '<span class="fix-badge fix-ambiguous">ambiguous</span>';
-        html += fc;
-      }
-      html += '</div>';
-    }
-
-    // Raw stage failure lines (linting, test failures, etc.)
-    if (summary.unparsed.length) {
-      if (summary.errors.length) {
-        html += '<div style="margin-top:8px;border-top:1px solid var(--vscode-widget-border);padding-top:6px"></div>';
-      }
-      let lastStage = '';
-      for (const u of summary.unparsed) {
-        if (u.stage !== lastStage) {
-          lastStage = u.stage;
-          const stageLabel = u.loglink
-            ? '<span class="open-url" data-url="' + escAttr(u.loglink) + '" style="cursor:pointer;text-decoration:underline">' + escHtml(u.stage) + '</span>'
-            : escHtml(u.stage);
-          html += '<div style="font-size:11px;color:var(--vscode-descriptionForeground);margin:4px 0 2px">' + stageLabel + '</div>';
-        }
-        html += '<div class="error-row" style="font-family:var(--vscode-editor-font-family);white-space:pre-wrap;word-break:break-all">' + escHtml(u.line) + '</div>';
-      }
-    }
-
-    return html;
-  }
-
-  function renderRepofixes(futureErrors, linkErrors) {
-    let html = '';
-    const fixedRows = [];
-
-    function fileLink(file, line, fixed) {
-      return '<span class="error-file open-file" data-file="' + escAttr(file) + '" data-line="' + escAttr(line || '') + '">'
-        + escHtml(file) + (line ? '<span style="color:var(--vscode-descriptionForeground)">:' + escHtml(line) + '</span>' : '')
-        + '</span>';
-    }
-
-    if (futureErrors && futureErrors.length) {
-      const active = futureErrors.filter(e => !e.alreadyFixed);
-      if (active.length) {
-        html += '<div class="section-title" style="margin-bottom:4px">Internal Link Issues (' + active.length + ')</div>';
-        for (const e of active) {
-          const canFix = e.bucket === 'suggest-delink';
-          const badge = canFix
-            ? '<span class="repofix-bucket bucket-fix">Auto Fix</span>'
-            : '<span class="repofix-bucket bucket-manual">manual</span>';
-          html += '<div class="repofix-row">' + fileLink(e.file, '', false) + badge;
-          html += '<div class="repofix-desc">' + escHtml(e.description) + '</div></div>';
-        }
-      }
-      for (const e of futureErrors.filter(e => e.alreadyFixed)) {
-        fixedRows.push('<div class="repofix-row">' + fileLink(e.file, '', true)
-          + '<span class="repofix-bucket bucket-fixed">Fixed Locally</span></div>');
-      }
-    }
-
-    if (linkErrors && linkErrors.length) {
-      const active = linkErrors.filter(e => !e.alreadyFixed);
-      if (active.length) {
-        html += '<div class="section-title" style="margin:10px 0 4px">External Link Issues (' + active.length + ')</div>';
-        for (const e of active) {
-          html += '<div class="repofix-row">' + fileLink(e.file, e.line, false)
-            + '<span class="repofix-bucket bucket-fix">Auto Fix</span>';
-          html += '<div class="repofix-url">' + escHtml(e.url) + '</div>';
-          if (e.reason) { html += '<div class="repofix-desc">' + escHtml(e.reason) + '</div>'; }
-          html += '</div>';
-        }
-      }
-      for (const e of linkErrors.filter(e => e.alreadyFixed)) {
-        fixedRows.push('<div class="repofix-row">' + fileLink(e.file, e.line, true)
-          + '<span class="repofix-bucket bucket-fixed">Fixed Locally</span></div>');
-      }
-    }
-
-    if (fixedRows.length) {
-      html += '<div class="section-title" style="margin:10px 0 4px">Fixed Locally (' + fixedRows.length + ')</div>';
-      html += fixedRows.join('');
-    }
-
-    if (!html) { html = '<span class="empty">No outstanding issues.</span>'; }
-    return html;
-  }
-
-  function updatePipelineStep(iconId, statusId, history) {
-    const iconEl = document.getElementById(iconId);
-    const statusEl = document.getElementById(statusId);
-    if (!history || history.length === 0) {
-      iconEl.textContent = '○'; iconEl.className = 'pipeline-icon icon-neutral';
-      statusEl.textContent = 'no builds yet'; return;
-    }
-    const latest = history[0];
-    const result = latest.result || (latest.state === 'RUNNING' ? 'RUNNING' : 'UNKNOWN');
-    const ago = formatAgo(latest.startTime);
-    if (result === 'SUCCESS') {
-      iconEl.textContent = '✓'; iconEl.className = 'pipeline-icon icon-success';
-      statusEl.textContent = 'passed ' + ago;
-    } else if (result === 'FAILURE' || result === 'UNSTABLE') {
-      iconEl.textContent = '✗'; iconEl.className = 'pipeline-icon icon-failure';
-      statusEl.textContent = 'failed ' + ago;
-    } else if (result === 'RUNNING') {
-      iconEl.textContent = '●'; iconEl.className = 'pipeline-icon icon-running';
-      statusEl.textContent = 'running…';
-    } else {
-      iconEl.textContent = '○'; iconEl.className = 'pipeline-icon icon-neutral';
-      statusEl.textContent = result.toLowerCase() + ' ' + ago;
-    }
-  }
-
-  function escAttr(str) {
-    return String(str || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-  }
-
-  // Delegated click handler for all .open-file elements (avoids inline onclick quote issues)
-  document.addEventListener('click', function(e) {
-    const el = e.target.closest('.open-file');
-    if (!el) return;
-    const filepath = el.dataset.file;
-    const line = parseInt(el.dataset.line) || 0;
-    if (filepath) vscode.postMessage({ command: 'openFile', filepath, line });
-  });
-
-  function appendLog(text, isError) {
-    const el = document.getElementById('buildLog');
-    const div = document.createElement('div');
-    if (isError) div.className = 'log-error';
-    div.textContent = text;
-    el.appendChild(div);
-    el.scrollTop = el.scrollHeight;
-  }
-
-  function escHtml(str) {
-    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-
-  window.addEventListener('message', event => {
-    const msg = event.data;
-    switch (msg.type) {
-      case 'showSetup':
-        _tokenUrl = msg.tokenUrl || '';
-        document.getElementById('tokenLink').textContent = msg.email
-          ? msg.email + ' Jenkins profile'
-          : 'Jenkins profile page';
-        document.getElementById('setupIntro').textContent = (!msg.hasJenkins && !msg.hasAiKey)
-          ? 'Enter your credentials below. At least one AI key (Claude or Anthropic) is required to use Apply Fixes.'
-          : !msg.hasJenkins
-            ? 'Jenkins API token is missing. Add it below to continue.'
-            : 'An AI key is required to use Apply Fixes. Add a Claude or Anthropic key below.';
-        document.getElementById('setupPanel').style.display = 'block';
-        document.getElementById('mainPanel').style.display = 'none';
-        document.getElementById(msg.hasJenkins ? 'claudeKeyInput' : 'tokenInput').focus();
-        break;
-
-      case 'hideSetup':
-        document.getElementById('setupPanel').style.display = 'none';
-        document.getElementById('mainPanel').style.display = 'block';
-        document.getElementById('tokenInput').value = '';
-        document.getElementById('claudeKeyInput').value = '';
-        document.getElementById('openAiKeyInput').value = '';
-        break;
-
-      case 'loading':
-        document.getElementById('refreshBtn').disabled = msg.loading;
-        break;
-
-      case 'banner': {
-        const b = document.getElementById('bannerError');
-        b.textContent = msg.text || '';
-        b.style.display = msg.text ? 'block' : 'none';
-        break;
-      }
-
-      case 'statusData':
-        document.getElementById('repoInfo').textContent = (msg.repo || '?') + '  ·  ' + (msg.branch || '?');
-        document.getElementById('buildHistory').innerHTML = renderHistory(msg.history, msg.queue);
-        document.getElementById('prodHistory').innerHTML = renderHistory(msg.prodHistory, msg.prodQueue);
-        document.getElementById('errorList').innerHTML = renderErrors(msg.summary);
-        document.getElementById('prodErrorList').innerHTML = renderErrors(msg.prodSummary);
-        // Update pipeline view
-        document.getElementById('pipelineBranch').textContent = msg.branch || '—';
-        updatePipelineStep('reviewBuildIcon', 'pipelineReviewStatus', msg.history);
-        updatePipelineStep('prodBuildIcon', 'pipelineProdStatus', msg.prodHistory);
-        break;
-
-      case 'log':
-        appendLog(msg.text, false);
-        break;
-
-      case 'error':
-        appendLog(msg.text, true);
-        break;
-
-      case 'buildStarted':
-        document.getElementById('progressWrap').style.display = 'block';
-        document.getElementById('progressFill').style.width = '0%';
-        // Update Status tab pipeline icon immediately
-        document.getElementById('reviewBuildIcon').textContent = '●';
-        document.getElementById('reviewBuildIcon').className = 'pipeline-icon icon-running';
-        document.getElementById('pipelineReviewStatus').textContent = 'build #' + msg.buildNum + ' running…';
-        document.getElementById('buildHistory').innerHTML =
-          '<div class="build-row"><span class="build-num">#' + msg.buildNum + '</span>'
-          + '<span class="badge badge-running">RUNNING</span></div>'
-          + (document.getElementById('buildHistory').innerHTML || '');
-        break;
-
-      case 'buildProgress': {
-        const pct = Math.min(99, Math.round((msg.elapsed / msg.estSecs) * 100));
-        document.getElementById('progressFill').style.width = pct + '%';
-        document.getElementById('etaRow').textContent = '#' + msg.buildNum + ' RUNNING  ' + msg.elapsed + 's elapsed  ' + msg.etaStr;
-        document.getElementById('pipelineReviewStatus').textContent = 'build #' + msg.buildNum + ' running… ' + msg.etaStr;
-        break;
-      }
-
-      case 'buildDone': {
-        document.getElementById('progressFill').style.width = '100%';
-        document.getElementById('etaRow').textContent = '#' + msg.buildNum + '  ' + msg.result;
-        const success = msg.result === 'SUCCESS';
-        document.getElementById('reviewBuildIcon').textContent = success ? '✓' : '✗';
-        document.getElementById('reviewBuildIcon').className = 'pipeline-icon ' + (success ? 'icon-success' : 'icon-failure');
-        document.getElementById('pipelineReviewStatus').textContent = 'build #' + msg.buildNum + ' ' + msg.result.toLowerCase();
-        break;
-      }
-
-      case 'switchTab':
-        switchTab(msg.tab);
-        break;
-
-      case 'repofixesData': {
-        const count = (msg.futureErrors?.length || 0) + (msg.linkErrors?.length || 0);
-        document.getElementById('tabOtherErrors').textContent = count ? 'Other Errors (' + count + ')' : 'Other Errors';
-        document.getElementById('repofixList').innerHTML = renderRepofixes(msg.futureErrors, msg.linkErrors);
-        break;
-      }
-
-      case 'showOtherLog': {
-        const el = document.getElementById('otherLog');
-        el.innerHTML = '';
-        el.style.display = 'block';
-        break;
-      }
-
-      case 'otherLog': {
-        const el = document.getElementById('otherLog');
-        const text = msg.text || '';
-        // Leading \\n → insert a blank spacer line first
-        if (text.startsWith('\\n')) {
-          const spacer = document.createElement('div');
-          spacer.innerHTML = '&nbsp;';
-          el.appendChild(spacer);
-        }
-        const div = document.createElement('div');
-        if (msg.isError) div.className = 'log-error';
-        div.textContent = text.replace(/^\\n/, '');
-        el.appendChild(div);
-        el.scrollTop = el.scrollHeight;
-        break;
-      }
-    }
-  });
-</script>
+<script src="${scriptUri}"></script>
 </body>
 </html>`;
   }
@@ -1273,4 +1113,13 @@ export class JenkinsPanelProvider implements vscode.WebviewViewProvider {
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function getNonce(): string {
+  let text = '';
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < 32; i++) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
+  return text;
 }
