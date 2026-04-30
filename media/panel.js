@@ -2,6 +2,8 @@
   let _tokenUrl = '';
   let _reportTimestamp = null;
   let _issueCount = 0;
+  let _uncommittedCount = 0;
+  let _pollInterval = null;
   const REPORT_INTERVAL_MS = 4 * 60 * 60 * 1000;
 
   function fmtMins(mins) {
@@ -15,6 +17,7 @@
     const icon = document.getElementById('reportStatusIcon');
     const text = document.getElementById('reportStatusText');
     const next = document.getElementById('reportNextLine');
+    if (!card || !icon || !text || !next) { return; }
     if (!_reportTimestamp) {
       icon.textContent = '○'; icon.style.color = '';
       text.textContent = _issueCount ? _issueCount + ' issues' : 'Loading…';
@@ -54,6 +57,10 @@
   function refresh() { vscode.postMessage({ command: 'refresh' }); }
   function mergePush() { vscode.postMessage({ command: 'mergePush' }); }
   function autoFix() { vscode.postMessage({ command: 'autoFix' }); }
+  function pushCheck() {
+    vscode.postMessage({ command: 'pushCheck' });
+  }
+  function commitAndPush() { vscode.postMessage({ command: 'commitAndPush' }); }
   function repofixes() { vscode.postMessage({ command: 'repofixes' }); }
   function applyFixes() { vscode.postMessage({ command: 'applyFixes' }); }
 
@@ -66,25 +73,22 @@
   }
 
   function submitCredentials() {
-    const token = document.getElementById('tokenInput').value.trim();
+    const ghToken = document.getElementById('ghTokenInput').value.trim();
     const claudeKey = document.getElementById('claudeKeyInput').value.trim();
     const openAiKey = document.getElementById('openAiKeyInput').value.trim();
     const err = document.getElementById('setupError');
-    if (!token) { err.textContent = 'Jenkins API token is required.'; err.style.display = 'block'; return; }
-    if (!claudeKey && !openAiKey) { err.textContent = 'At least one AI key (Claude or ChatGPT) is required.'; err.style.display = 'block'; return; }
     err.style.display = 'none';
-    vscode.postMessage({ command: 'saveCredentials', token, claudeKey, openAiKey });
+    vscode.postMessage({ command: 'saveCredentials', ghToken, claudeKey, openAiKey });
   }
 
-  // Allow Enter key in any setup input to submit
-  ['tokenInput', 'claudeKeyInput', 'openAiKeyInput'].forEach(id => {
-    document.getElementById(id).addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') submitCredentials();
-    });
+  const setupInputIds = ['ghTokenInput', 'claudeKeyInput', 'openAiKeyInput'];
+  setupInputIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.addEventListener('keydown', function(e) { if (e.key === 'Enter') submitCredentials(); }); }
   });
 
   function switchTab(tab) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    document.querySelectorAll('.sp-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tab));
   }
 
@@ -102,10 +106,10 @@
     return Math.floor(diff / 3600) + 'h ago';
   }
 
-  function badgeClass(result, state) {
-    if (state === 'QUEUED') return 'badge-queued';
-    if (state === 'RUNNING') return 'badge-running';
-    if (result === 'SUCCESS') return 'badge-success';
+  function badgeClass(result) {
+    if (result === 'QUEUED')   return 'badge-queued';
+    if (result === 'RUNNING')  return 'badge-running';
+    if (result === 'SUCCESS')  return 'badge-success';
     if (result === 'FAILURE' || result === 'UNSTABLE') return 'badge-failure';
     return 'badge-aborted';
   }
@@ -119,10 +123,10 @@
       html += '<div class="build-row"><span class="build-num">—</span><span class="badge badge-queued">QUEUED</span><span class="build-meta">' + escHtml(queue.why) + '</span></div>';
     }
     for (const run of history) {
-      const result = run.result || (run.state === 'RUNNING' ? 'RUNNING' : 'ABORTED');
-      const bc = badgeClass(run.result, run.state);
+      const result = run.result || 'ABORTED';
+      const bc = badgeClass(result);
       html += '<div class="build-row">';
-      html += '<span class="build-num">#' + run.id + '</span>';
+      html += '<span class="build-num">#' + escHtml(String(run.id || '')) + '</span>';
       html += '<span class="badge ' + bc + '">' + result + '</span>';
       html += '<span class="build-meta">' + formatAgo(run.startTime) + (run.durationInMillis ? ' · ' + formatDuration(run.durationInMillis) : '') + '</span>';
       html += '</div>';
@@ -134,21 +138,52 @@
     if (!summary || (!summary.errors.length && !summary.unparsed.length)) {
       return '<span class="empty">No errors from recent builds.</span>';
     }
-    let html = '<div style="font-size:11px;color:var(--vscode-descriptionForeground);margin-bottom:4px">Build #' + summary.buildNum + '</div>';
+    const hasCI = summary.runId > 0;
+    let html = hasCI
+      ? '<div style="font-size:11px;color:var(--vscode-descriptionForeground);margin-bottom:4px">Run #' + summary.runId + '</div>'
+      : '';
 
     // Parsed link errors
     for (const err of summary.errors) {
-      const rowClass = err.active ? 'error-row' : 'error-row resolved';
-      const checkmark = err.active ? '' : ' ✓';
-      html += '<div class="' + rowClass + '">';
-      html += '<span class="error-file open-file" data-file="' + escAttr(err.filepath) + '" data-line="' + err.lineno + '">' + escHtml(err.filepath) + ':' + err.lineno + checkmark + '</span> ';
-      html += '<span class="error-target">' + escHtml(err.target) + '</span>';
+      const rowClass = 'error-row';
+      const checkmark = '';
+      const isLocal = err.source === 'local';
+      html += '<div class="' + rowClass + '" data-file="' + escAttr(err.filepath) + '" data-line="' + escAttr(err.lineno) + '">';
+      html += '<span class="error-file open-file" data-file="' + escAttr(err.filepath) + '" data-line="' + err.lineno + '">' + escHtml(err.filepath) + ':' + err.lineno + checkmark + '</span>';
+      if (isLocal) {
+        html += ' <span class="fix-badge" style="background:var(--sp-notice-bg);color:var(--sp-notice)">local</span>';
+      }
+      if (err.rule) { html += ' <span class="error-rule">' + escHtml(err.rule) + '</span>'; }
       if (err.active) {
-        let fc = '';
-        if (err.fixStatus === 'path-fix') fc = '<span class="fix-badge fix-path">path fix</span>';
-        else if (err.fixStatus === 'delink') fc = '<span class="fix-badge fix-delink">de-link</span>';
-        else if (err.fixStatus === 'ambiguous') fc = '<span class="fix-badge fix-ambiguous">ambiguous</span>';
-        html += fc;
+        if (err.fixStatus === 'path-fix') {
+          const candidate = (err.fixCandidates && err.fixCandidates[0]) ? err.fixCandidates[0] : '';
+          html += ' <span class="fix-badge fix-path">path fix</span>'
+            + ' <button class="fix-action-btn fix-action-apply"'
+            + ' data-action="path-fix" data-file="' + escAttr(err.filepath) + '"'
+            + ' data-line="' + escAttr(err.lineno) + '" data-candidate="' + escAttr(candidate) + '"'
+            + ' data-target="' + escAttr(err.target) + '">✓ Apply</button>';
+        } else if (err.fixStatus === 'delink') {
+          html += ' <span class="fix-badge fix-delink">de-link</span>'
+            + ' <button class="fix-action-btn fix-action-delink"'
+            + ' data-action="delink" data-file="' + escAttr(err.filepath) + '"'
+            + ' data-line="' + escAttr(err.lineno) + '" data-candidate="" data-target="' + escAttr(err.target) + '">✗ De-link</button>';
+        } else if (err.fixStatus === 'ambiguous') {
+          html += ' <span class="fix-badge fix-ambiguous">ambiguous</span>';
+        }
+      }
+      if (err.reason) { html += '<div class="error-reason">' + escHtml(err.reason) + '</div>'; }
+      if (err.active && err.proposedFix) {
+        // For rules that aren't path-fix/delink, show an Apply button inline with the diff
+        var needsApplyBtn = err.fixStatus !== 'path-fix' && err.fixStatus !== 'delink';
+        html += '<div class="diff-pre">'
+          + '<span class="diff-del">- ' + escHtml(err.proposedFix.before.trimEnd()) + '</span>'
+          + '<span class="diff-add">+ ' + escHtml(err.proposedFix.after.trimEnd()) + '</span>'
+          + (needsApplyBtn
+            ? ' <button class="fix-action-btn fix-action-apply"'
+              + ' data-action="markdown-fix" data-file="' + escAttr(err.filepath) + '"'
+              + ' data-line="' + escAttr(err.lineno) + '" data-candidate="" data-target="">✓ Apply</button>'
+            : '')
+          + '</div>';
       }
       html += '</div>';
     }
@@ -264,6 +299,7 @@
   function updatePipelineStep(iconId, statusId, history) {
     const iconEl = document.getElementById(iconId);
     const statusEl = document.getElementById(statusId);
+    if (!iconEl || !statusEl) { return; }
     if (!history || history.length === 0) {
       iconEl.textContent = '○'; iconEl.className = 'pipeline-icon icon-neutral';
       statusEl.textContent = 'no builds yet'; return;
@@ -299,6 +335,22 @@
     if (filepath) vscode.postMessage({ command: 'openFile', filepath, line });
   });
 
+  // Delegated click handler for Apply / De-link fix buttons
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.fix-action-btn');
+    if (!btn || btn.disabled) { return; }
+    btn.disabled = true;
+    btn.textContent = '…';
+    vscode.postMessage({
+      command: 'applyOneFix',
+      action:    btn.dataset.action,
+      filepath:  btn.dataset.file,
+      lineno:    parseInt(btn.dataset.line) || 0,
+      candidate: btn.dataset.candidate || '',
+      target:    btn.dataset.target || '',
+    });
+  });
+
   function appendLog(text, isError) {
     const el = document.getElementById('buildLog');
     const div = document.createElement('div');
@@ -316,31 +368,34 @@
     const msg = event.data;
     try {
     switch (msg.type) {
-      case 'showSetup':
-        _tokenUrl = msg.tokenUrl || '';
-        document.getElementById('tokenLink').textContent = msg.email
-          ? msg.email + ' Jenkins profile'
-          : 'Jenkins profile page';
-        document.getElementById('setupIntro').textContent = (!msg.hasJenkins && !msg.hasAiKey)
-          ? 'Enter your credentials below. At least one AI key (Claude or Anthropic) is required to use Apply Fixes.'
-          : !msg.hasJenkins
-            ? 'Jenkins API token is missing. Add it below to continue.'
-            : 'An AI key is required to use Apply Fixes. Add a Claude or Anthropic key below.';
+      case 'showSetup': {
+        const hasToken = msg.hasToken !== false;
+        const ghField = document.getElementById('ghTokenField');
+        if (ghField) { ghField.style.display = hasToken ? 'none' : 'block'; }
+        const intro = document.getElementById('setupIntro');
+        if (intro) {
+          intro.textContent = hasToken
+            ? 'Add a Claude API key to enable Apply Fixes. GitHub access uses your existing gh CLI authentication.'
+            : 'GitHub token not found. Run "gh auth login" or paste a personal access token below.';
+        }
         document.getElementById('setupPanel').style.display = 'block';
         document.getElementById('mainPanel').style.display = 'none';
-        document.getElementById(msg.hasJenkins ? 'claudeKeyInput' : 'tokenInput').focus();
+        const focusId = hasToken ? 'claudeKeyInput' : 'ghTokenInput';
+        const focusEl = document.getElementById(focusId);
+        if (focusEl) focusEl.focus();
         break;
+      }
 
       case 'hideSetup':
         document.getElementById('setupPanel').style.display = 'none';
         document.getElementById('mainPanel').style.display = 'block';
-        document.getElementById('tokenInput').value = '';
-        document.getElementById('claudeKeyInput').value = '';
-        document.getElementById('openAiKeyInput').value = '';
+        ['ghTokenInput', 'claudeKeyInput', 'openAiKeyInput'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
         break;
 
       case 'loading':
-        document.getElementById('refreshBtn').disabled = msg.loading;
         break;
 
       case 'banner': {
@@ -350,17 +405,27 @@
         break;
       }
 
-      case 'statusData':
+      case 'statusData': {
+        _uncommittedCount = msg.uncommittedCount || 0;
         document.getElementById('repoInfo').textContent = (msg.repo || '?') + '  ·  ' + (msg.branch || '?');
-        document.getElementById('buildHistory').innerHTML = renderHistory(msg.history, msg.queue);
-        document.getElementById('prodHistory').innerHTML = renderHistory(msg.prodHistory, msg.prodQueue);
+        document.getElementById('buildHistory').innerHTML = renderHistory(msg.runs, null);
         document.getElementById('errorList').innerHTML = renderErrors(msg.summary);
-        document.getElementById('prodErrorList').innerHTML = renderErrors(msg.prodSummary);
-        // Update pipeline view
         document.getElementById('pipelineBranch').textContent = msg.branch || '—';
-        updatePipelineStep('reviewBuildIcon', 'pipelineReviewStatus', msg.history);
-        updatePipelineStep('prodBuildIcon', 'pipelineProdStatus', msg.prodHistory);
+        updatePipelineStep('reviewBuildIcon', 'pipelineReviewStatus', msg.runs);
+        const latestResult = msg.runs && msg.runs[0] ? msg.runs[0].result : null;
+        const hasErrors = msg.summary && (msg.summary.errors.length > 0 || msg.summary.unparsed.length > 0);
+        const errCount = hasErrors ? (msg.summary.errors.length || 0) + (msg.summary.unparsed.length || 0) : 0;
+        const errHeading = document.getElementById('errorsHeading');
+        if (errHeading) { errHeading.textContent = errCount > 0 ? `Errors (${errCount})` : 'Errors'; }
+        const isActive = latestResult === 'RUNNING' || latestResult === 'QUEUED';
+        if (isActive && !_pollInterval) {
+          _pollInterval = setInterval(() => refresh(), 10000);
+        } else if (!isActive && _pollInterval) {
+          clearInterval(_pollInterval);
+          _pollInterval = null;
+        }
         break;
+      }
 
       case 'log':
         appendLog(msg.text, false);
@@ -378,7 +443,7 @@
         document.getElementById('reviewBuildIcon').className = 'pipeline-icon icon-running';
         document.getElementById('pipelineReviewStatus').textContent = 'build #' + msg.buildNum + ' running…';
         document.getElementById('buildHistory').innerHTML =
-          '<div class="build-row"><span class="build-num">#' + msg.buildNum + '</span>'
+          '<div class="build-row"><span class="build-num">#' + escHtml(String(msg.buildNum || '')) + '</span>'
           + '<span class="badge badge-running">RUNNING</span></div>'
           + (document.getElementById('buildHistory').innerHTML || '');
         break;
@@ -386,24 +451,35 @@
       case 'buildProgress': {
         const pct = Math.min(99, Math.round((msg.elapsed / msg.estSecs) * 100));
         document.getElementById('progressFill').style.width = pct + '%';
-        document.getElementById('etaRow').textContent = '#' + msg.buildNum + ' RUNNING  ' + msg.elapsed + 's elapsed  ' + msg.etaStr;
-        document.getElementById('pipelineReviewStatus').textContent = 'build #' + msg.buildNum + ' running… ' + msg.etaStr;
+        document.getElementById('etaRow').textContent = msg.elapsed + 's elapsed  ' + msg.etaStr;
+        document.getElementById('pipelineReviewStatus').textContent = 'running…';
         break;
       }
 
       case 'buildDone': {
-        document.getElementById('progressFill').style.width = '100%';
-        document.getElementById('etaRow').textContent = '#' + msg.buildNum + '  ' + msg.result;
         const success = msg.result === 'SUCCESS';
         document.getElementById('reviewBuildIcon').textContent = success ? '✓' : '✗';
         document.getElementById('reviewBuildIcon').className = 'pipeline-icon ' + (success ? 'icon-success' : 'icon-failure');
         document.getElementById('pipelineReviewStatus').textContent = 'build #' + msg.buildNum + ' ' + msg.result.toLowerCase();
+        setTimeout(() => { document.getElementById('progressWrap').style.display = 'none'; }, 2000);
         break;
       }
 
       case 'switchTab':
         switchTab(msg.tab);
         break;
+
+      case 'fixApplied': {
+        const row = document.querySelector(
+          '.error-row[data-file="' + CSS.escape(msg.filepath) + '"][data-line="' + CSS.escape(String(msg.lineno)) + '"]'
+        );
+        if (row) {
+          row.querySelectorAll('.fix-action-btn').forEach(b => b.remove());
+          const diffEl = row.querySelector('.diff-pre');
+          if (diffEl) { diffEl.remove(); }
+        }
+        break;
+      }
 
       case 'repofixesData': {
         const activeCount = (msg.futureErrors?.filter(e => !e.alreadyFixed && !e.falsePositive).length || 0)

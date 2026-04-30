@@ -71,7 +71,7 @@ export const EXL_LINK_PATTERNS: LinkPattern[] = [
   {
     id: 'external-trailing-slash',
     name: 'External URL trailing slash',
-    description: 'External URLs should not end with /. Jenkins link checker flags these as broken.',
+    description: 'External URLs should not end with /. The CI link checker flags these as broken.',
     detect: (url) => url.startsWith('http') && url.split('#')[0].endsWith('/'),
     fix: (url, _sourceFile, _repoRoot) => {
       // Strip the trailing slash — cannot verify externally, but it is the known fix.

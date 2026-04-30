@@ -38,6 +38,9 @@ import { toggleTip } from "./commands/toggle-tip";
 import { toggleUIControl } from "./commands/toggle-uicontrol";
 import { toggleVideo } from "./commands/toggle-video";
 import { toggleWarning } from "./commands/toggle-warning";
+import { toggleTabs } from "./commands/toggle-tabs";
+import { toggleShadebox } from "./commands/toggle-shadebox";
+import { toggleCollapsible } from "./commands/toggle-collapsible";
 
 interface CommandItem extends QuickPickItem {
   label: string;
@@ -288,6 +291,27 @@ const _commands: Command[] = [
     toggleUIControl,
     "Toggle UIControl",
     "[!UICONTROL text to be translated]",
+    true
+  ),
+  new Command(
+    "toggleTabs",
+    toggleTabs,
+    "Toggle Tabs",
+    ">[!BEGINTABS] … >[!ENDTABS]",
+    true
+  ),
+  new Command(
+    "toggleShadebox",
+    toggleShadebox,
+    "Toggle Shadebox",
+    ">[!BEGINSHADEBOX] … >[!ENDSHADEBOX]",
+    true
+  ),
+  new Command(
+    "toggleCollapsible",
+    toggleCollapsible,
+    "Toggle Collapsible",
+    "+++Title … +++",
     true
   ),
 ];

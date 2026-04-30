@@ -13,8 +13,15 @@
   function highlightAll() {
     if (typeof Prism === 'undefined') { return; }
     document.querySelectorAll('pre code[class*="language-"]').forEach(function (block) {
-      // Skip blocks already tokenized this cycle
+      // Skip blocks already tokenized by Prism this cycle
       if (block.querySelector('.token')) { return; }
+
+      // VS Code's built-in highlight.js runs on common languages (json, js, etc.)
+      // and outputs .hljs-* spans. Strip those before Prism runs so Prism sees
+      // plain text — our Prism CSS uses .token classes, not .hljs-* classes.
+      if (block.classList.contains('hljs')) {
+        block.textContent = block.textContent;
+      }
 
       // Resolve the declared language; fall back to clike for unknowns
       var cls = Array.prototype.find.call(block.classList, function (c) {

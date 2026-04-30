@@ -34,7 +34,7 @@ Authoring Guide. Key articles:
 
 ### 1. External URL trailing slash
 
-The Jenkins link checker flags external URLs that end with `/` because the server returns
+The CI link checker flags external URLs that end with `/` because the server returns
 a redirect rather than a 200. Remove the trailing slash.
 
 - `https://example.com/page/` → `https://example.com/page`
@@ -86,7 +86,7 @@ the correct form — mark skip with reason "false positive, file already correct
 
 ### 6. Known false positives — domains that block automated link checkers
 
-These domains return 403/gateway errors to the Jenkins link checker but are valid URLs.
+These domains return 403/gateway errors to the CI link checker but are valid URLs.
 Mark them skip with reason "false positive — host blocks automated checkers":
 
 - `developer.apple.com` — Apple blocks automated HTTP requests with a gateway error

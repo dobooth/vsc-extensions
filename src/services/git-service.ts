@@ -15,48 +15,6 @@ export function getStatus(cwd: string): GitStatus {
   return { clean: porcelain.length === 0, branch, repoRoot };
 }
 
-export function fetchReview(cwd: string): void {
-  execSync('git fetch origin review', { cwd, stdio: 'inherit' });
-}
-
-export function getLastBuildNum(cwd: string): number {
-  // Placeholder — returns 0; real build num comes from Jenkins API
-  return 0;
-}
-
-/**
- * Merge current branch into a disposable _jenkins_push branch, return the push SHA.
- * Throws on merge conflict or any git error.
- */
-export function mergeIntoPushBranch(cwd: string, currentBranch: string): string {
-  // Reset disposable branch to exact state of origin/review
-  execSync('git checkout -B _jenkins_push origin/review', { cwd, encoding: 'utf8' });
-  try {
-    execSync(`git merge "${currentBranch}" --no-edit`, { cwd, encoding: 'utf8' });
-  } catch (err) {
-    execSync('git merge --abort', { cwd });
-    execSync(`git checkout "${currentBranch}"`, { cwd });
-    try { execSync('git branch -D _jenkins_push', { cwd }); } catch { /* ignore */ }
-    throw new Error('Merge conflict — resolve conflicts manually before pushing.');
-  }
-  const sha = execSync('git rev-parse HEAD', { cwd, encoding: 'utf8' }).trim();
-  return sha;
-}
-
-/**
- * Push _jenkins_push to review, clean up disposable branch, return to original branch.
- */
-export function pushToReview(cwd: string, currentBranch: string): void {
-  try {
-    execSync('git push origin _jenkins_push:review', { cwd, encoding: 'utf8' });
-  } catch (err) {
-    execSync(`git checkout "${currentBranch}"`, { cwd });
-    try { execSync('git branch -D _jenkins_push', { cwd }); } catch { /* ignore */ }
-    throw new Error('Push to review failed. Check your network and credentials.');
-  }
-  execSync(`git checkout "${currentBranch}"`, { cwd });
-  try { execSync('git branch -D _jenkins_push', { cwd }); } catch { /* ignore */ }
-}
 
 /**
  * Apply a path fix: replace the broken link target with a corrected relative path.
@@ -110,7 +68,8 @@ export function applyPathFix(
  */
 export function commitFixes(cwd: string, message: string): void {
   execSync('git add -u', { cwd });
-  execSync(`git commit -m "${message.replace(/"/g, '\\"')}"`, { cwd });
+  const r = spawnSync('git', ['commit', '-m', message], { cwd, encoding: 'utf8' });
+  if (r.status !== 0) { throw new Error(r.stderr?.trim() || 'git commit failed'); }
 }
 
 /**
@@ -229,6 +188,90 @@ export function delinkBrokenRef(
     }
   } catch { /* ignore */ }
   return results;
+}
+
+/**
+ * Push current branch to origin and return the pushed HEAD SHA.
+ */
+export function pushCurrentBranch(cwd: string): string {
+  execSync('git push origin HEAD', { cwd, encoding: 'utf8' });
+  return execSync('git rev-parse HEAD', { cwd, encoding: 'utf8' }).trim();
+}
+
+/**
+ * Stage all modified tracked files, commit, and push HEAD to origin.
+ */
+export function commitAndPush(cwd: string, message: string): void {
+  execSync('git add -u', { cwd });
+  const r = spawnSync('git', ['commit', '-m', message], { cwd, encoding: 'utf8' });
+  if (r.status !== 0) { throw new Error(r.stderr?.trim() || 'git commit failed'); }
+  execSync('git push origin HEAD', { cwd, encoding: 'utf8' });
+}
+
+/**
+ * Return repo-relative paths of files with uncommitted changes (M, A, D, etc.).
+ */
+export function getUncommittedFiles(cwd: string): string[] {
+  try {
+    const out = execSync('git status --porcelain', { cwd, encoding: 'utf8' });
+    return out.trim().split('\n').filter(Boolean).map(l => l.slice(3).trim());
+  } catch { return []; }
+}
+
+/**
+ * Remove the markdown link wrapping `target` on or near `lineno`, keeping the link text.
+ * Returns true if a replacement was made.
+ */
+export function delinkAtLine(filepath: string, lineno: number, target: string): boolean {
+  try {
+    const lines = fs.readFileSync(filepath, 'utf8').split('\n');
+    const basename = path.basename(target.split('#')[0]);
+    const lo = Math.max(0, lineno - 3);
+    const hi = Math.min(lines.length, lineno + 2);
+
+    for (let i = lo; i < hi; i++) {
+      if (!lines[i].includes(basename)) { continue; }
+      const original = lines[i];
+
+      // [text](…basename…) → text
+      let updated = original.replace(
+        new RegExp(`\\[([^\\]]+)\\]\\([^)]*${escapeRegex(basename)}[^)]*\\)(?:\\{[^}]*\\})?`, 'g'),
+        '$1'
+      );
+      // <a href="…basename…">text</a> → text
+      if (updated === original) {
+        updated = original.replace(
+          new RegExp(`<a[^>]*href="[^"]*${escapeRegex(basename)}[^"]*"[^>]*>([^<]*)<\\/a>`, 'g'),
+          '$1'
+        );
+      }
+      // Orphaned {target="_blank"} left after link removal
+      updated = updated.replace(/(?<!\))\{target="_blank"\}/g, '');
+
+      if (updated !== original) {
+        lines[i] = updated;
+        fs.writeFileSync(filepath, lines.join('\n'), 'utf8');
+        return true;
+      }
+    }
+  } catch { /* ignore */ }
+  return false;
+}
+
+/**
+ * Replace a single line in a file. Verifies the existing content matches
+ * `before` to avoid blind overwrites. Returns true if the replacement was made.
+ */
+export function applyLineFix(filepath: string, lineno: number, before: string, after: string): boolean {
+  try {
+    const lines = fs.readFileSync(filepath, 'utf8').split('\n');
+    const idx = lineno - 1;
+    if (idx < 0 || idx >= lines.length) { return false; }
+    if (lines[idx] !== before) { return false; }
+    lines[idx] = after;
+    fs.writeFileSync(filepath, lines.join('\n'), 'utf8');
+    return true;
+  } catch { return false; }
 }
 
 function escapeRegex(s: string): string {

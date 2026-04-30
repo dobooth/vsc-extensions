@@ -7,7 +7,7 @@ import {
   window,
   WorkspaceFolder,
 } from 'vscode';
-import { JenkinsPanelProvider } from './panels/jenkins-panel';
+import { GhecPanelProvider } from './panels/ghec-panel';
 
 import {
 	checkMarkdownlintCustomProperty,checkMarkdownlintConfigSettings
@@ -98,9 +98,9 @@ export function activate(context: ExtensionContext) {
   register(context);
   output.appendLine(`[${msTimeValue}] - Registered markdown shortcuts`);
 
-  const jenkinsProvider = new JenkinsPanelProvider(context);
+  const ghecProvider = new GhecPanelProvider(context);
   context.subscriptions.push(
-    (window as any).registerWebviewViewProvider('adobeExl.jenkinsPanel', jenkinsProvider, {
+    (window as any).registerWebviewViewProvider('adobeExl.ghecPanel', ghecProvider, {
       webviewOptions: { retainContextWhenHidden: true }
     })
   );

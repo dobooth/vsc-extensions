@@ -2,7 +2,7 @@
   "name": "adobe-markdown-authoring",
   "displayName": "ExL Markdown Authoring",
   "description": "Integrated preview, linter validation, and keyboard shortcuts for Adobe Flavored Markdown.",
-  "version": "2.2.0",
+  "version": "2.0.0",
   "publisher": "AdobeExL",
   "engines": {
     "vscode": "^1.75.0"
@@ -12,7 +12,7 @@
     "type": "git",
     "url": "https://github.com/AdobeDocs/vsc-extensions.git"
   },
-  "icon": "icon.png",
+  "icon": "assets/img/adobe-red-logo.png",
   "license": "Apache-2.0",
   "categories": [
     "Other"
@@ -25,49 +25,48 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "exl-jenkins",
-          "title": "EXL Jenkins",
-          "icon": "./assets/icons/jenkins.svg"
+          "id": "exl-ghec",
+          "title": "EXL CI Monitor",
+          "icon": "./assets/icons/ci-monitor.svg"
         }
       ]
     },
     "views": {
-      "exl-jenkins": [
+      "exl-ghec": [
         {
           "type": "webview",
-          "id": "adobeExl.jenkinsPanel",
-          "name": "Build Monitor"
+          "id": "adobeExl.ghecPanel",
+          "name": "Build Monitor",
+          "icon": "./assets/icons/ci-monitor.svg"
         }
       ]
     },
     "markdown.previewStyles": [
       "./assets/styles/typekit.css",
       "./assets/styles/base.css",
-      "./assets/styles/spectrum.css",
-      "./assets/styles/docs.css",
       "./assets/styles/adobe-preview.css"
     ],
     "markdown.previewScripts": [
-      "./node_modules/prismjs/prism.js",
-      "./node_modules/prismjs/components/prism-clike.js",
-      "./node_modules/prismjs/components/prism-javascript.js",
-      "./node_modules/prismjs/components/prism-typescript.js",
-      "./node_modules/prismjs/components/prism-markup.js",
-      "./node_modules/prismjs/components/prism-markup-templating.js",
-      "./node_modules/prismjs/components/prism-css.js",
-      "./node_modules/prismjs/components/prism-scss.js",
-      "./node_modules/prismjs/components/prism-json.js",
-      "./node_modules/prismjs/components/prism-bash.js",
-      "./node_modules/prismjs/components/prism-python.js",
-      "./node_modules/prismjs/components/prism-yaml.js",
-      "./node_modules/prismjs/components/prism-java.js",
-      "./node_modules/prismjs/components/prism-sql.js",
-      "./node_modules/prismjs/components/prism-graphql.js",
-      "./node_modules/prismjs/components/prism-diff.js",
-      "./node_modules/prismjs/components/prism-http.js",
-      "./node_modules/prismjs/components/prism-velocity.js",
-      "./node_modules/prismjs/components/prism-apex.js",
-      "./node_modules/prismjs/components/prism-php.js",
+      "./assets/scripts/prism/prism.js",
+      "./assets/scripts/prism/prism-clike.js",
+      "./assets/scripts/prism/prism-javascript.js",
+      "./assets/scripts/prism/prism-typescript.js",
+      "./assets/scripts/prism/prism-markup.js",
+      "./assets/scripts/prism/prism-markup-templating.js",
+      "./assets/scripts/prism/prism-css.js",
+      "./assets/scripts/prism/prism-scss.js",
+      "./assets/scripts/prism/prism-json.js",
+      "./assets/scripts/prism/prism-bash.js",
+      "./assets/scripts/prism/prism-python.js",
+      "./assets/scripts/prism/prism-yaml.js",
+      "./assets/scripts/prism/prism-java.js",
+      "./assets/scripts/prism/prism-sql.js",
+      "./assets/scripts/prism/prism-graphql.js",
+      "./assets/scripts/prism/prism-diff.js",
+      "./assets/scripts/prism/prism-http.js",
+      "./assets/scripts/prism/prism-velocity.js",
+      "./assets/scripts/prism/prism-apex.js",
+      "./assets/scripts/prism/prism-php.js",
       "./assets/scripts/prism-init.js"
     ],
     "markdown.markdownItPlugins": true,
@@ -347,6 +346,21 @@
         "command": "md-shortcut.toggleUIControl",
         "title": "Toggle UICONTROL",
         "category": "Markdown Shortcuts"
+      },
+      {
+        "command": "md-shortcut.toggleTabs",
+        "title": "Toggle Tabs",
+        "category": "Markdown Shortcuts"
+      },
+      {
+        "command": "md-shortcut.toggleShadebox",
+        "title": "Toggle Shadebox",
+        "category": "Markdown Shortcuts"
+      },
+      {
+        "command": "md-shortcut.toggleCollapsible",
+        "title": "Toggle Collapsible",
+        "category": "Markdown Shortcuts"
       }
     ],
     "keybindings": [
@@ -602,6 +616,21 @@
           "command": "md-shortcut.toggleUIControl",
           "when": "markdown:enabled",
           "group": "2_markdown_4@15"
+        },
+        {
+          "command": "md-shortcut.toggleTabs",
+          "when": "markdown:enabled",
+          "group": "2_markdown_4@16"
+        },
+        {
+          "command": "md-shortcut.toggleShadebox",
+          "when": "markdown:enabled",
+          "group": "2_markdown_4@17"
+        },
+        {
+          "command": "md-shortcut.toggleCollapsible",
+          "when": "markdown:enabled",
+          "group": "2_markdown_4@18"
         }
       ],
       "editor/title": [
@@ -652,7 +681,8 @@
   "dependencies": {
     "js-yaml": "^4.1.0",
     "markdown-it": "^13.0.1",
-    "markdown-it-replace-link": "^1.1.0"
+    "markdown-it-replace-link": "^1.1.0",
+    "markdownlint": "^0.40.0"
   },
   "devDependencies": {
     "@types/glob": "^7.1.3",

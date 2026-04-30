@@ -150,45 +150,29 @@
   background-color: #fafafa;
 }
 
-/* ─── Spectrum semantic colours (resolved for VS Code webview) ────────────── */
-:root {
-  --adobe-color-informative:        #1473E6;
-  --adobe-color-informative-bg:     #EBF3FF;
-  --adobe-color-informative-border: #1473E6;
-
-  --adobe-color-notice:             #E68619;
-  --adobe-color-notice-bg:          #FEF5E6;
-  --adobe-color-notice-border:      #E68619;
-
-  --adobe-color-negative:           #D7373F;
-  --adobe-color-negative-bg:        #FEF1F2;
-  --adobe-color-negative-border:    #D7373F;
-
-  --adobe-color-positive:           #268E6C;
-  --adobe-color-positive-bg:        #EEFAF6;
-  --adobe-color-positive-border:    #268E6C;
-}
-
 /* ─── Alert box base ──────────────────────────────────────────────────────── */
-.extension {
+/* .vscode-body scope gives (0,2,0) specificity, beating docs.css (0,1,0)    */
+.vscode-body .extension {
   position: relative;
   padding: 0.875rem 1rem 0.875rem 1.25rem;
   border-radius: 4px;
   border: 1px solid #e0e0e0;
-  border-left-width: 4px;
+  border-left-width: 17px;
   margin: 1.25rem 0;
   color: inherit;
-  background-color: #fafafa;
+  background-color: #fafafa !important;
+  box-shadow: none !important;  /* suppress docs.css white-card elevation */
 }
 
 /* Suppress the broken SVG icon rules from docs.css */
-.extension > div:first-child:before {
+.vscode-body .extension > div:first-child:before {
   content: none !important;
   background: none !important;
 }
 
 /* ─── Alert label — driven by data-label attribute ───────────────────────── */
-.extension[data-label]::before {
+/* (0,3,1) — beats all docs.css admonition rules                              */
+.vscode-body .extension[data-label]::before {
   content: "ℹ\00a0" attr(data-label);
   display: block;
   font-size: 0.6875rem;
@@ -200,109 +184,99 @@
 }
 
 /* ─── Alert content spacing ───────────────────────────────────────────────── */
-/* adobe-alerts core rule wraps content in <p> directly inside .extension */
-.extension > p {
-  margin: 0;
-}
-.extension > p + p {
-  margin-top: 0.5rem;
-}
-.extension > p:empty {
-  display: none;
-}
-.extension > ul,
-.extension > ol {
-  margin: 0;
-  padding-left: 1.5rem;
-}
+.vscode-body .extension > p { margin: 0; }
+.vscode-body .extension > p + p { margin-top: 0.5rem; }
+.vscode-body .extension > p:empty { display: none; }
+.vscode-body .extension > ul,
+.vscode-body .extension > ol { margin: 0; padding-left: 1.5rem; }
 
 /* ─── NOTE ───────────────────────────────────────────────────────────────── */
-.extension.note {
-  background-color: var(--adobe-color-informative-bg);
-  border-left-color: var(--adobe-color-informative-border);
+.vscode-body .extension.note {
+  background-color: #fdfdfd !important;
+  border-left-color: #1473E6 !important;
 }
-.extension.note::before { color: var(--adobe-color-informative); }
+.vscode-body .extension.note::before { color: #1473E6; }
 
 /* ─── TIP ────────────────────────────────────────────────────────────────── */
-.extension.tip {
-  background-color: var(--adobe-color-informative-bg);
-  border-left-color: var(--adobe-color-informative-border);
+.vscode-body .extension.tip {
+  background-color: #fdfdfd !important;
+  border-left-color: #268E6C !important;
 }
-.extension.tip::before { color: var(--adobe-color-informative); }
+.vscode-body .extension.tip::before { content: "💡\00a0" attr(data-label); color: #268E6C; }
 
 /* ─── INFO ───────────────────────────────────────────────────────────────── */
-.extension.info {
-  background-color: var(--adobe-color-informative-bg);
-  border-left-color: var(--adobe-color-informative-border);
+.vscode-body .extension.info {
+  background-color: #fdfdfd !important;
+  border-left-color: #1473E6 !important;
 }
-.extension.info::before { color: var(--adobe-color-informative); }
+.vscode-body .extension.info::before { color: #1473E6; }
 
 /* ─── ADMIN / ADMINISTRATION ─────────────────────────────────────────────── */
-.extension.admin,
-.extension.administration {
-  background-color: var(--adobe-color-informative-bg);
-  border-left-color: var(--adobe-color-informative-border);
+.vscode-body .extension.admin,
+.vscode-body .extension.administration {
+  background-color: #fdfdfd !important;
+  border-left-color: #1473E6 !important;
 }
-.extension.admin::before,
-.extension.administration::before { color: var(--adobe-color-informative); }
+.vscode-body .extension.admin::before,
+.vscode-body .extension.administration::before { color: #1473E6; }
 
 /* ─── AVAILABILITY ───────────────────────────────────────────────────────── */
-.extension.availability {
-  background-color: var(--adobe-color-informative-bg);
-  border-left-color: var(--adobe-color-informative-border);
+.vscode-body .extension.availability {
+  background-color: #fdfdfd !important;
+  border-left-color: #1473E6 !important;
 }
-.extension.availability::before { color: var(--adobe-color-informative); }
+.vscode-body .extension.availability::before { color: #1473E6; }
 
 /* ─── PREREQUISITES ──────────────────────────────────────────────────────── */
-.extension.prerequisites {
-  background-color: var(--adobe-color-informative-bg);
-  border-left-color: var(--adobe-color-informative-border);
+.vscode-body .extension.prerequisites {
+  background-color: #fdfdfd !important;
+  border-left-color: #1473E6 !important;
 }
-.extension.prerequisites::before { color: var(--adobe-color-informative); }
+.vscode-body .extension.prerequisites::before { color: #1473E6; }
 
 /* ─── IMPORTANT ──────────────────────────────────────────────────────────── */
-.extension.important {
-  background-color: var(--adobe-color-notice-bg);
-  border-left-color: var(--adobe-color-notice-border);
+.vscode-body .extension.important {
+  background-color: #fdfdfd !important;
+  border-left-color: #E68619 !important;
 }
-.extension.important::before { content: "⚠\00a0" attr(data-label); color: var(--adobe-color-notice); }
+.vscode-body .extension.important::before { content: "⚠\00a0" attr(data-label); color: #E68619; }
 
 /* ─── WARNING ────────────────────────────────────────────────────────────── */
-.extension.warning {
-  background-color: var(--adobe-color-negative-bg);
-  border-left-color: var(--adobe-color-negative-border);
+.vscode-body .extension.warning {
+  background-color: #fdfdfd !important;
+  border-left-color: #D7373F !important;
 }
-.extension.warning::before { content: "⚠\00a0" attr(data-label); color: var(--adobe-color-negative); }
+.vscode-body .extension.warning::before { content: "⚠\00a0" attr(data-label); color: #D7373F; }
 
 /* ─── CAUTION ────────────────────────────────────────────────────────────── */
-.extension.caution {
-  background-color: var(--adobe-color-negative-bg);
-  border-left-color: var(--adobe-color-negative-border);
+.vscode-body .extension.caution {
+  background-color: #fdfdfd !important;
+  border-left-color: #E68619 !important;
 }
-.extension.caution::before { content: "⚠\00a0" attr(data-label); color: var(--adobe-color-negative); }
+.vscode-body .extension.caution::before { content: "⚠\00a0" attr(data-label); color: #E68619; }
 
 /* ─── ERROR ──────────────────────────────────────────────────────────────── */
-.extension.error {
-  background-color: var(--adobe-color-negative-bg);
-  border-left-color: var(--adobe-color-negative-border);
+.vscode-body .extension.error {
+  background-color: #fdfdfd !important;
+  border-left-color: #D7373F !important;
 }
-.extension.error::before { content: "⚠\00a0" attr(data-label); color: var(--adobe-color-negative); }
+.vscode-body .extension.error::before { content: "⚠\00a0" attr(data-label); color: #D7373F; }
 
 /* ─── SUCCESS ────────────────────────────────────────────────────────────── */
-.extension.success {
-  background-color: var(--adobe-color-positive-bg);
-  border-left-color: var(--adobe-color-positive-border);
+.vscode-body .extension.success {
+  background-color: #fdfdfd !important;
+  border-left-color: #268E6C !important;
 }
-.extension.success::before { content: "✓\00a0" attr(data-label); color: var(--adobe-color-positive); }
+.vscode-body .extension.success::before { content: "✓\00a0" attr(data-label); color: #268E6C; }
 
 /* ─── MORELIKETHIS ───────────────────────────────────────────────────────── */
-.extension.morelikethis {
-  background-color: #f8f8f8;
+.vscode-body .extension.morelikethis {
+  background-color: #fdfdfd;
   border-left-color: #aaa;
 }
-.extension.morelikethis::before {
+.vscode-body .extension.morelikethis::before {
   color: #555;
-  text-transform: none;   /* "More like this" — mixed case intentional */
+  text-transform: none;
 }
 
 /* ─── Shade boxes (>[!BEGINSHADEBOX] / >[!ENDSHADEBOX]) ──────────────────── */
@@ -333,19 +307,19 @@
   white-space: nowrap;
 }
 .vscode-body .badge-informative {
-  background-color: var(--adobe-color-informative-bg);
-  color: var(--adobe-color-informative);
-  border: 1px solid var(--adobe-color-informative-border);
+  background-color: #EBF3FF;
+  color: #1473E6;
+  border: 1px solid #1473E6;
 }
 .vscode-body .badge-positive {
-  background-color: var(--adobe-color-positive-bg);
-  color: var(--adobe-color-positive);
-  border: 1px solid var(--adobe-color-positive-border);
+  background-color: #EEFAF6;
+  color: #268E6C;
+  border: 1px solid #268E6C;
 }
 .vscode-body .badge-negative {
-  background-color: var(--adobe-color-negative-bg);
-  color: var(--adobe-color-negative);
-  border: 1px solid var(--adobe-color-negative-border);
+  background-color: #FEF1F2;
+  color: #D7373F;
+  border: 1px solid #D7373F;
 }
 .vscode-body .badge-neutral {
   background-color: #f5f5f5;
@@ -353,9 +327,9 @@
   border: 1px solid #999;
 }
 .vscode-body .badge-caution {
-  background-color: var(--adobe-color-notice-bg);
-  color: var(--adobe-color-notice);
-  border: 1px solid var(--adobe-color-notice-border);
+  background-color: #FEF5E6;
+  color: #E68619;
+  border: 1px solid #E68619;
 }
 
 /* ─── Tabs (>[!BEGINTABS] / >[!TAB] / >[!ENDTABS]) ──────────────────────── */

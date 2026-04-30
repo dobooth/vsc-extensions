@@ -1,6 +1,6 @@
 # Adobe Experience League Markdown Authoring
 
-A Visual Studio Code extension for authoring Adobe Experience League documentation. It enhances the built-in Markdown preview with Adobe-flavored syntax and adds a Jenkins Build Monitor panel for CI/CD visibility.
+A Visual Studio Code extension for authoring Adobe Experience League documentation. It enhances the built-in Markdown preview with Adobe-flavored syntax and adds a Build Monitor panel for PR status visibility.
 
 ## Features
 
@@ -19,22 +19,46 @@ Renders EXL-specific Markdown extensions in the VS Code preview panel:
 
 **To see all supported syntax in action:** open [preview-test.md](preview-test.md) and run **Markdown: Open Preview to the Side** (`Ctrl+K V`).
 
-### Jenkins Build Monitor
+### GitHub Actions CI Monitor
 
-A sidebar panel (Activity Bar) for monitoring Jenkins CI builds without leaving VS Code.
+Note: This feature is still under development.
 
-**Setup:** Open the Jenkins panel, enter your `username:api-token` credential, and save. Credentials are stored in VS Code's SecretStorage (never on disk). To get an API token, visit `https://docs.ci.corp.adobe.com/user/<your-username>/configure`.
+A sidebar panel (Activity Bar) for monitoring GitHub Actions CI builds without leaving VS Code.
+
+**Setup:** It should pick up your GHEC account automatically. Authenticate with the GitHub CLI (`gh auth login`) if it does not.
 
 **Tabs:**
 
-- **Status** — Shows the latest review and prod build results with error counts. Lists build errors from the review job with inline fix options (auto path-fix or de-link).
-- **Build** — Pipeline view showing the full flow: Branch → Merge & Push → Review build → Promote → Prod build. Displays build progress and history.
-- **Other Errors** — Future errors and broken external links from the Jenkins reporting jobs (`FutureErrorsCheckExl`, `LinkCheckExl`). Click any file path to open it at the relevant line.
+- **Status** — Shows recent workflow run results with error counts. Lists markdownlint and spelling errors from the latest failed run with inline fix options. Apply individual fixes and commit directly from the panel.
+- **Build** — Pipeline view with push, auto-fix, and rerun actions. Displays live build progress and history.
 
-**Build types:**
+#### Auto-fix
 
-- **Review build** (`{repo}_review-exl`) — Triggered when a branch is pushed to the `review` branch. Validates internal links, structure, and EXL-specific rules.
-- **Prod build** (`{repo}_exl`) — Triggered after a PR merges to the default branch. Publishes to Experience League.
+The panel can automatically fix a wide range of common EXL markdown violations without leaving VS Code. Supported rules include:
+
+| Rule | Fix applied |
+| --- | --- |
+| AM007 | Anchor tag `{[id]}` → `{#id}` |
+| AM009 | Malformed Adobe block — corrects or adds the `>` prefix |
+| AM011 / AM019 | Space between `]` and `(` in link syntax |
+| AM013 | Four-or-more backtick fence → three backticks |
+| MD001 | Heading level adjusted to expected depth |
+| MD004 | Asterisk list marker `*` → dash `-` |
+| MD009 | Trailing spaces removed |
+| MD010 | Hard tabs → two spaces |
+| MD018 | Missing space after `#` in ATX heading |
+| MD019 | Multiple spaces after `#` in ATX heading |
+| MD022 | Blank line inserted before heading |
+| MD023 | Leading whitespace removed from heading |
+| MD029 | Ordered list item prefix normalized to `1.` |
+| MD031 / MD032 | Blank line inserted before fenced block or list |
+| MD047 | Trailing newline appended to file |
+
+Unfixable errors are surfaced as VS Code diagnostics in the **Problems** panel, making them visible to AI coding assistants (GitHub Copilot, Cursor, Claude Code).
+
+#### Local lint
+
+The panel also runs markdownlint and cspell against your locally changed files on every refresh, catching issues before you push. The spell checker is pre-configured to ignore EXL macro syntax.
 
 ### Markdown shortcuts
 
@@ -59,6 +83,9 @@ Keyboard shortcuts for common EXL authoring tasks.
 | md-shortcut.toggleVideo | `>[!VIDEO]` block | ctrl+M ctrl+V |
 | md-shortcut.toggleDNL | `[!DNL]` macro | ctrl+M ctrl+D |
 | md-shortcut.toggleUIControl | `[!UICONTROL]` macro | ctrl+M ctrl+U |
+| md-shortcut.toggleTabs | `>[!BEGINTABS]` block | — |
+| md-shortcut.toggleShadebox | `>[!BEGINSHADEBOX]` block | — |
+| md-shortcut.toggleCollapsible | `+++` collapsible section | — |
 
 ### Markdown lint validation
 
@@ -73,5 +100,5 @@ Requires VS Code 1.44.0 or higher.
 ## More information
 
 - [Adobe Contributor Guide](https://experienceleague.adobe.com/en/docs/contributor/contributor-guide/introduction)
-- [Adobe Markdown Syntax Style Guide](https://experienceleague.adobe.com/en/docs/contributor/contributor-guide/writing-essentials/markdown)
+- [Adobe Markdown Authoring Guide](https://experienceleague.adobe.com/en/docs/authoring-guide/using/home)
 - [markdownlint](https://github.com/DavidAnson/markdownlint)

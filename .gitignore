@@ -5,5 +5,5 @@ Icon
 **/**/Icon
 *.log
 .claude/
-vsix/*.vsix
+*.vsix
 
