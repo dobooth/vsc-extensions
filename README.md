@@ -2,6 +2,8 @@
 
 A Visual Studio Code extension for authoring Adobe Experience League documentation. It enhances the built-in Markdown preview with Adobe-flavored syntax and adds a Build Monitor panel for PR status visibility.
 
+**Note:** The Markdown Preview Enhanced extension deletes the Right Click > Open Preview option. Disable or uninstall that extension to see the new preview.
+
 ## Features
 
 ### Adobe Markdown preview
@@ -18,7 +20,7 @@ Renders EXL-specific Markdown extensions in the VS Code preview panel:
 - Localization macros: `[!DNL product]`, `[!UICONTROL label]`
 - Prism syntax highlighting for code blocks (JavaScript, TypeScript, JSON, Bash, Python, SQL, YAML, and more)
 
-**To see all supported syntax in action:** open [preview-test.md](preview-test.md) and run **Markdown: Open Preview to the Side** (`Ctrl+K V`).
+**To see all supported syntax in action:** open [preview-test.md](preview-test.md), right-click on the file name tab and Open Preview.
 
 ### GitHub Actions CI Monitor
 
