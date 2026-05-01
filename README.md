@@ -12,6 +12,7 @@ Renders EXL-specific Markdown extensions in the VS Code preview panel:
 - Shade boxes: `>[!BEGINSHADEBOX]` / `>[!ENDSHADEBOX]`
 - Tabs: `>[!BEGINTABS]` / `>[!TAB Label]` / `>[!ENDTABS]`
 - Collapsible sections: `+++Title` / `+++`
+- Hides Contextual Help
 - Embedded video: `>[!VIDEO](url)`
 - Inline badges: `[!BADGE Label]{type=Informative}`
 - Localization macros: `[!DNL product]`, `[!UICONTROL label]`

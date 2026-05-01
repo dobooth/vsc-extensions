@@ -299,6 +299,18 @@ export function activate(context: ExtensionContext) {
         SUCCESS:        {cls: 'success',        label: 'SUCCESS'},
         MORELIKETHIS:   {cls: 'morelikethis',   label: 'More like this'},
       };
+      const contextualHelpMarker = /^\[!CONTEXTUALHELP\]\s*$/i;
+      const contextualHelpAttrLine = /^[a-z][\w-]*(?:="[^"]*")(?:\s+[a-z][\w-]*="[^"]*")*\s*$/i;
+
+      const isContextualHelpBlock = (tokens: any[], openIdx: number, closeIdx: number): boolean => {
+        const lines: string[] = [];
+        for (let j = openIdx + 1; j < closeIdx; j++) {
+          if (tokens[j].type !== 'inline') { continue; }
+          lines.push(...tokens[j].content.split(/\r?\n/).map((line: string) => line.trim()).filter(Boolean));
+        }
+        if (!lines.length || !contextualHelpMarker.test(lines[0])) { return false; }
+        return lines.slice(1).every((line) => contextualHelpAttrLine.test(line));
+      };
 
       md.core.ruler.push('adobe-alerts', function (state) {
         const tokens = state.tokens;
@@ -332,6 +344,12 @@ export function activate(context: ExtensionContext) {
           if (firstInlineIdx < 0) { continue; }
 
           const raw = tokens[firstInlineIdx].content.trim();
+
+          // Contextual help is publishing metadata, not article body content.
+          if (isContextualHelpBlock(tokens, i, closeIdx)) {
+            tokens.splice(i, closeIdx - i + 1);
+            continue;
+          }
 
           // Replace blockquote tokens with raw HTML.
           // Order matters: set closeIdx first (highest index), splice middle, set i last.

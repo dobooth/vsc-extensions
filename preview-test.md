@@ -5,6 +5,15 @@ description: Examples of Adobe EXL markdown syntax for testing the extension pre
 
 # EXL preview test
 
+>[!CONTEXTUALHELP]
+>id="models_insights_undefinedchannels"
+>title="Undefined channels"
+>abstract="Undefined channels are included, but have no attributed conversions."
+
+A horizontal bar graph visualization that displays the ROI or CPA performance by each of the channels. This visualization highlights the ROI / CPA of your marketing investments. The channels are ranked in descending order based on ROI / CPA. The visualization helps to identify which channels are most effective and which might need optimization.
+
+Undefined channels are included in the visualization but have no attributed conversions.
+
 ## Alert blocks
 
 >[!NOTE]
