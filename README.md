@@ -61,7 +61,8 @@ Unfixable errors are surfaced as VS Code diagnostics in the **Problems** panel, 
 
 #### Local lint
 
-The panel also runs markdownlint and cspell against your locally changed files on every refresh, catching issues before you push. The spell checker is pre-configured to ignore EXL macro syntax.
+Version 2 uses the updated Adobe markdown linting rules.
+The panel also runs cspell against your locally changed files on every refresh, catching issues before you push. The spell checker is pre-configured to ignore EXL macro syntax.
 
 ### Markdown shortcuts
 
