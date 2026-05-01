@@ -64,19 +64,30 @@ export function addFrontMatterTitle() {
 const DEFAULT_MARKDOWNLINT_CONFIG = {
     "line-length": false,
     "AM001": false,
-    "AM009": false,
+    "AM005": false,
     "AM011": false,
-    "MD003": {
-      "style": "atx"
+    "AM018": false,
+    "AM020": true,
+    "AM033": false,
+    "AM045": {
+      "bannedTokens": ["table", "image", "htmlFlow"],
+      "childReposPattern": "^[a-z0-9-]+$"
     },
-    "MD004": {
-      "style": "consistent"
+    "AM046": {
+      "validateSlideshows": true
     },
-    "MD007": {
-      "indent": 4
+    "AM054": false,
+    "AM055": false,
+    "AM056": false,
+    "AM058": false,
+    "MD005": false,
+    "MD006": {
+      "severity": "warning"
     },
+    "MD007": false,
     "MD009": false,
     "MD012": false,
+    "MD013": false,
     "MD014": false,
     "MD024": false,
     "MD025": {
@@ -85,48 +96,25 @@ const DEFAULT_MARKDOWNLINT_CONFIG = {
     "MD026": false,
     "MD027": false,
     "MD028": false,
-    "MD030": {
-      "ul_multi": 3,
-      "ol_multi": 2
-    },
-    "MD033": {
-      "allowed_elements": [
-        "a",
-        "b",
-        "br",
-        "caption",
-        "code",
-        "col",
-        "colgroup",
-        "div",
-        "em",
-        "I",
-        "img",
-        "li",
-        "ol",
-        "p",
-        "pre",
-        "s",
-        "span",
-        "strong",
-        "sub",
-        "sup",
-        "table",
-        "tbody",
-        "td",
-        "tfoot",
-        "th",
-        "thead",
-        "tr",
-        "u",
-        "ul"
-      ]
-    },
+    "MD030": false,
+    "MD032": false,
+    "MD033": false,
+    "MD034": false,
     "MD036": false,
+    "MD037": false,
     "MD038": false,
     "MD039": false,
     "MD040": false,
-    "MD045": false
+    "MD041": false,
+    "MD045": false,
+    "MD046": false,
+    "MD047": false,
+    "MD049": false,
+    "MD050": false,
+    "MD051": false,
+    "MD053": false,
+    "MD059": false,
+    "MD060": false
 };
 
 /**
@@ -176,7 +164,8 @@ export function checkMarkdownlintConfigSettings() {
 export function checkMarkdownlintCustomProperty() {
 	const { msTimeValue } = generateTimestamp();
 	const customProperty = 'markdownlint.customRules';
-	const customRuleset = '{adobeexl.adobe-markdown-authoring}/markdownlint-custom-rules/rules.js';
+	const customRuleset = '{adobeexl.adobe-markdown-authoring}/markdownlint-custom-rules/rules.mjs';
+	const legacyCustomRuleset = '{adobeexl.adobe-markdown-authoring}/markdownlint-custom-rules/rules.js';
 	const customPropertyData: any = workspace.getConfiguration().inspect(customProperty);
 
 	if (!customPropertyData) {
@@ -198,7 +187,10 @@ export function checkMarkdownlintCustomProperty() {
 			? customPropertyData.workspaceValue
 			: String(customPropertyData.workspaceValue).split(',');
 		workspaceValues.forEach((setting: string) => {
-			existingWorkspaceRules.push(setting.trim());
+			const trimmed = setting.trim();
+			if (trimmed && trimmed !== legacyCustomRuleset) {
+				existingWorkspaceRules.push(trimmed);
+			}
 		});
 	}
 

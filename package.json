@@ -679,10 +679,13 @@
     "davidanson.vscode-markdownlint"
   ],
   "dependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "axios": "^1.15.2",
     "js-yaml": "^4.1.0",
     "markdown-it": "^13.0.1",
     "markdown-it-replace-link": "^1.1.0",
-    "markdownlint": "^0.40.0"
+    "markdownlint-cli2": "^0.18.1"
   },
   "devDependencies": {
     "@types/glob": "^7.1.3",

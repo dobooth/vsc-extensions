@@ -2,9 +2,6 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { spawnSync } from 'child_process';
 import type { BuildError } from './ghec-service';
-// markdownlint ships CommonJS only — no ESM entry point available
-// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
-const markdownlint = require('markdownlint');
 
 export function runLocalLint(
   repoRoot: string,
@@ -16,37 +13,39 @@ export function runLocalLint(
 
   const errors: BuildError[] = [];
 
-  // ── markdownlint ────────────────────────────────────────────────────────────
+  // ── markdownlint-cli2 (via ESM runner) ──────────────────────────────────────
   try {
-    const configPath = path.join(repoRoot, '.markdownlint.json');
-    const config = fs.existsSync(configPath)
-      ? JSON.parse(fs.readFileSync(configPath, 'utf8'))
-      : { MD013: false };
+    const runnerPath = path.join(extensionPath, 'markdownlint-custom-rules', 'run-lint.mjs');
+    const rulesPath  = path.join(extensionPath, 'markdownlint-custom-rules', 'rules.mjs');
+    const absFiles   = mdFiles.map(f => path.join(repoRoot, f));
 
-    const rulesPath = path.join(extensionPath, 'markdownlint-custom-rules', 'rules.js');
-    const customRules = fs.existsSync(rulesPath) ? require(rulesPath) : [];
+    const proc = spawnSync('node', [runnerPath, rulesPath, repoRoot, ...absFiles], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
 
-    const absFiles = mdFiles.map(f => path.join(repoRoot, f));
-    const results = markdownlint.sync({ files: absFiles, config, customRules });
-
-    for (const [absFile, fileErrors] of Object.entries(results) as [string, any[]][]) {
-      const relFile = path.relative(repoRoot, absFile).replace(/\\/g, '/');
-      for (const e of fileErrors) {
-        const rule = (e.ruleNames as string[]).join('/');
-        const detail = e.errorDetail ? ': ' + e.errorDetail : '';
-        errors.push({
-          filepath: relFile,
-          lineno: String(e.lineNumber ?? 1),
-          rule,
-          reason: (e.ruleDescription ?? rule) + detail,
-          target: '',
-          active: true,
-          fixStatus: 'unknown',
-          source: 'local',
-        });
+    if (proc.stdout) {
+      const results: Record<string, any[]> = JSON.parse(proc.stdout);
+      for (const [filePath, fileErrors] of Object.entries(results)) {
+        const relFile = path.relative(repoRoot, filePath).replace(/\\/g, '/');
+        for (const e of fileErrors) {
+          const rule = (e.ruleNames as string[]).join('/');
+          const detail = e.errorDetail ? ': ' + e.errorDetail : '';
+          errors.push({
+            filepath: relFile,
+            lineno: String(e.lineNumber ?? 1),
+            rule,
+            reason: (e.ruleDescription ?? rule) + detail,
+            target: '',
+            active: true,
+            fixStatus: 'unknown',
+            source: 'local',
+          });
+        }
       }
     }
-  } catch (e) { console.debug('[local-lint] markdownlint skipped:', e); }
+  } catch (e) { console.debug('[local-lint] markdownlint-cli2 skipped:', e); }
 
   // ── cspell ──────────────────────────────────────────────────────────────────
   try {
