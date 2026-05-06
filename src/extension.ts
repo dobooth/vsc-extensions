@@ -44,7 +44,7 @@ export function activate(context: ExtensionContext) {
   }
 
   function togglemarkdown(langId: string) {
-    commands.executeCommand(
+    void commands.executeCommand(
       'setContext',
       'markdown:enabled',
       languageRegex.test(langId)

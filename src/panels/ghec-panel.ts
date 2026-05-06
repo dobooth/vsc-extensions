@@ -15,8 +15,6 @@ import { buildClaudeClient, loadRepairContext, ANTHROPIC_KEY_SECRET, OPENAI_KEY_
 import { runLocalLint } from '../services/local-lint-service';
 import { output } from '../lib/common';
 
-const VIEW_TYPE = 'adobeExl.ghecPanel';
-
 export class GhecPanelProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
   private _config: GhecConfig | null = null;
@@ -55,21 +53,21 @@ export class GhecPanelProvider implements vscode.WebviewViewProvider {
         case 'applyOneFix':     await this._handleApplyOneFix(msg.action, msg.filepath, msg.lineno, msg.candidate, msg.target); break;
         case 'commitAndPush':   await this._handleCommitAndPush(); break;
         case 'openFile':        await this._openFile(msg.filepath, msg.line); break;
-        case 'openUrl':         vscode.env.openExternal(vscode.Uri.parse(msg.url)); break;
+        case 'openUrl':         void vscode.env.openExternal(vscode.Uri.parse(msg.url)); break;
       }
     });
 
     webviewView.onDidChangeVisibility(() => {
-      if (webviewView.visible) { this._handleRefresh(); }
+      if (webviewView.visible) { void this._handleRefresh(); }
     });
 
-    this._handleRefresh();
+    void this._handleRefresh();
   }
 
   // ── Message helpers ────────────────────────────────────────────────────────
 
   private _post(type: string, payload: unknown): void {
-    this._view?.webview.postMessage({ type, ...payload as object });
+    void this._view?.webview.postMessage({ type, ...payload as object });
   }
 
   private _log(text: string): void { this._post('log', { text }); }
@@ -268,7 +266,7 @@ export class GhecPanelProvider implements vscode.WebviewViewProvider {
         this._error('Failed to create PR. Check permissions or create it manually on GitHub.'); return;
       }
       this._log(`PR #${pr.number} created.`);
-      vscode.env.openExternal(vscode.Uri.parse(pr.url));
+      void vscode.env.openExternal(vscode.Uri.parse(pr.url));
     } else {
       this._log(`Found PR #${pr.number}: ${pr.title}`);
     }
@@ -671,7 +669,7 @@ export class GhecPanelProvider implements vscode.WebviewViewProvider {
         : {};
       await vscode.window.showTextDocument(uri, opts);
     } catch (e: any) {
-      vscode.window.showErrorMessage(`Could not open file: ${absPath}\n${e.message}`);
+      void vscode.window.showErrorMessage(`Could not open file: ${absPath}\n${e.message}`);
     }
   }
 

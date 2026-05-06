@@ -9,6 +9,10 @@
 		"sourceMap": true,
 		"rootDir": "src",
 		"strict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true,
 		"skipLibCheck": true,
 		"paths": {
 			"vscode": ["./node_modules/@types/vscode/index.d.ts"]

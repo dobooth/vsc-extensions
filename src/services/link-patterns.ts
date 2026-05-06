@@ -85,7 +85,7 @@ export const EXL_LINK_PATTERNS: LinkPattern[] = [
     name: 'Trailing slash',
     description: 'Internal links must not end with /. Remove the slash; add .md if missing.',
     detect: (url) => !url.startsWith('http') && url.split('#')[0].endsWith('/'),
-    fix: (url, sourceFile, repoRoot) => {
+    fix: (url, sourceFile, _repoRoot) => {
       const anchor = url.includes('#') ? url.slice(url.indexOf('#')) : '';
       const base = url.split('#')[0].replace(/\/+$/, '');
       // Try: no slash, then no slash + .md

@@ -11,7 +11,7 @@
     // Use the workspace TypeScript instead of VS Code's bundled version
     "typescript.tsdk": "node_modules/typescript/lib",
     "markdownlint.customRules": [
-        "{adobeexl.adobe-markdown-authoring}/markdownlint-custom-rules/rules.js"
+        "{adobeexl.adobe-markdown-authoring}/markdownlint-custom-rules/rules.mjs"
     ],
     "markdownlint.config": {
         "line-length": false,

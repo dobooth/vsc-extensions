@@ -1,4 +1,3 @@
-import * as vscode from 'vscode';
 import * as editorHelpers from './editorHelpers';
 import { isAnythingSelected } from './editorHelpers';
 
@@ -23,7 +22,7 @@ export function addTable(addHeader:boolean=false) {
     else {
         editFunc = convertToTableWithoutHeader;
     }
-    editorHelpers.replaceBlockSelection(editFunc);
+    void editorHelpers.replaceBlockSelection(editFunc);
 }
 
 const tableColumnSeparator:RegExp = /([ ]{2,}|[\t])/gi;

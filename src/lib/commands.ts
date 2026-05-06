@@ -1,7 +1,5 @@
 import * as vscode from "vscode";
 
-import { getEol } from "./env";
-
 import { ExtensionContext, QuickPickOptions, QuickPickItem } from "vscode";
 
 import { addTable } from "./tables";
@@ -50,12 +48,12 @@ class Command implements CommandItem {
   command: string;
   description?: string;
   showInCommandPalette: boolean;
-  callback: () => void;
+  callback: () => unknown;
   label: string;
 
   constructor(
     command: string,
-    callback: () => void,
+    callback: () => unknown,
     label: string,
     description?: string,
     showInCommandPalette?: boolean
@@ -329,7 +327,7 @@ export function register(context: ExtensionContext) {
 
 function showCommandPalette() {
   const options: QuickPickOptions = { matchOnDescription: true };
-  vscode.window
+  void vscode.window
     .showQuickPick(
       _commands.filter((cmd) => cmd.showInCommandPalette),
       options
@@ -338,7 +336,7 @@ function showCommandPalette() {
       if (!cmd) {
         return;
       }
-      cmd.callback();
+      void cmd.callback();
     });
 }
 

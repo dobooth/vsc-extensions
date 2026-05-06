@@ -11,7 +11,6 @@ import {
 	Position
 } from 'vscode';
 
-import { ExtensionContext, extensions } from 'vscode';
 import { isMarkdownFileCheckWithoutNotification, matchAll } from './common';
 
 interface IExpressionReplacementPair {

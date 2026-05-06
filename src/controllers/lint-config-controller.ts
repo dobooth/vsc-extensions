@@ -13,7 +13,7 @@ export function removeBlankLineInsideBlockQuote() {
 	if (markdownlintData.globalValue) {
 		const existingUserSettings = markdownlintData.globalValue;
 		Object.assign(existingUserSettings, { MD028: false });
-		workspace
+		void workspace
 			.getConfiguration()
 			.update(markdownlintProperty, existingUserSettings, ConfigurationTarget.Global);
 		showStatusMessage(`disabled MD028 rule in Markdownlint config setting.`);
@@ -21,7 +21,7 @@ export function removeBlankLineInsideBlockQuote() {
 	// add md028 property and front_matter_title property directly (no existing settings)
 	if (!markdownlintData.globalValue) {
 		const blankLineInsideBlockQuoterParameter = { MD028: false };
-		workspace
+		void workspace
 			.getConfiguration()
 			.update(
 				markdownlintProperty,
@@ -39,7 +39,7 @@ export function addFrontMatterTitle() {
 	if (markdownlintData.globalValue && addFrontMatterTitleSetting) {
 		const existingUserSettings = markdownlintData.globalValue;
 		Object.assign(existingUserSettings, { MD025: { front_matter_title: '' } });
-		workspace
+		void workspace
 			.getConfiguration()
 			.update(markdownlintProperty, existingUserSettings, ConfigurationTarget.Global);
 		showStatusMessage(`Added front_matter_title property to Markdownlint config setting.`);
@@ -47,7 +47,7 @@ export function addFrontMatterTitle() {
 	// add md025 property and front_matter_title property directly (no existing settings)
 	if (!markdownlintData.globalValue && addFrontMatterTitleSetting) {
 		const frontMatterParameter = { MD025: { front_matter_title: '' } };
-		workspace
+		void workspace
 			.getConfiguration()
 			.update(markdownlintProperty, frontMatterParameter, ConfigurationTarget.Global);
 		showStatusMessage(`Added front_matter_title property to Markdownlint config setting.`);
@@ -147,7 +147,7 @@ export function checkMarkdownlintConfigSettings() {
 		return;
 	}
 
-	workspace
+	void workspace
 		.getConfiguration()
 		.update(configProperty, customLintConfig, ConfigurationTarget.Workspace);
 	output.appendLine(
@@ -203,7 +203,7 @@ export function checkMarkdownlintCustomProperty() {
 
 	// Add our ruleset to workspace settings.
 	existingWorkspaceRules.push(customRuleset);
-	workspace
+	void workspace
 		.getConfiguration()
 		.update(customProperty, existingWorkspaceRules, ConfigurationTarget.Workspace);
 	output.appendLine(

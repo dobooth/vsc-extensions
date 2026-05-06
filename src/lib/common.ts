@@ -49,7 +49,7 @@ export function showStatusMessage(message: string) {
  * @param {string} message - the message to post to the editor as an error.
  */
 export async function showWarningMessage(message: string) {
-  vscode.window.showWarningMessage(message);
+  void vscode.window.showWarningMessage(message);
 }
 
 export function isMarkdownFileCheckWithoutNotification(editor: TextEditor) {

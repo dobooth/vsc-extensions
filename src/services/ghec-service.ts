@@ -93,22 +93,6 @@ function httpsPostJson(url: string, token: string, body: object): Promise<any> {
   });
 }
 
-function httpsPost(url: string, token: string): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const urlObj = new URL(url);
-    const req = https.request({
-      hostname: urlObj.hostname,
-      path: urlObj.pathname + urlObj.search,
-      method: 'POST',
-      headers: { ...GH_HEADERS(token), 'Content-Length': 0 },
-      timeout: 15000,
-    }, (res) => { resolve(res.statusCode ?? 0); });
-    req.on('error', reject);
-    req.on('timeout', () => { req.destroy(); reject(new Error('Request timed out')); });
-    req.end();
-  });
-}
-
 function mapResult(status: string, conclusion: string | null): BuildRun['result'] {
   if (status === 'queued') { return 'QUEUED'; }
   if (status === 'in_progress') { return 'RUNNING'; }
@@ -235,7 +219,7 @@ function extractTarget(rule: string, reason: string): string {
   return '';
 }
 
-function errorStillActive(filepath: string, lineno: number, target: string, repoRoot: string, filePath: string): boolean {
+function errorStillActive(filepath: string, lineno: number, target: string, _repoRoot: string, _filePath: string): boolean {
   try {
     const lines = fs.readFileSync(filepath, 'utf8').split('\n');
     const lo = Math.max(0, lineno - 3);
