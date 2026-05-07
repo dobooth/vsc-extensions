@@ -1,6 +1,6 @@
 {
   "scopeName": "markdown.afm.injection",
-  "injectionSelector": "L:text.html.markdown - markup.fenced_code.block.markdown - markup.inline.raw.string.markdown",
+  "injectionSelector": "L:text.html.markdown - markup.fenced_code.block.markdown - markup.inline.raw.string.markdown - meta.embedded.block.frontmatter",
   "patterns": [
     {
       "include": "#afm-informative-admonition-block"
@@ -15,9 +15,6 @@
       "include": "#afm-negative-admonition-block"
     },
     {
-      "include": "#afm-neutral-admonition-block"
-    },
-    {
       "include": "#afm-informative-admonition-tag"
     },
     {
@@ -28,9 +25,6 @@
     },
     {
       "include": "#afm-negative-admonition-tag"
-    },
-    {
-      "include": "#afm-neutral-admonition-tag"
     },
     {
       "include": "#afm-badge-informative-tag"
@@ -211,6 +205,9 @@
       "name": "meta.afm.block.admonition.informative.markdown",
       "begin": "^(\\s*>\\s*)(\\[!)(NOTE|INFO|ADMIN|ADMINISTRATION|AVAILABILITY|PREREQUISITES|CONTEXTUALHELP)\\b([^\\]\\r\\n]*)(\\])",
       "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.afm.blockquote.informative.markdown"
+        },
         "2": {
           "name": "punctuation.definition.afm.begin.markdown"
         },
@@ -224,17 +221,20 @@
           "name": "punctuation.definition.afm.end.markdown"
         }
       },
-      "end": "^(?!\\s*>)",
+      "while": "^\\s*>",
+      "whileCaptures": {
+        "0": { "name": "punctuation.definition.afm.blockquote.informative.markdown" }
+      },
       "patterns": [
         {
           "include": "#afm-fenced-code-in-admonition-blockquote"
         },
         {
-          "match": "^(\\s*>\\s?)(?!\\[!)(.+)$",
+          "match": "^\\s*>([a-zA-Z][\\w-]*)(=)(\"[^\"\\r\\n]*\"|'[^'\\r\\n]*')",
           "captures": {
-            "2": {
-              "name": "meta.afm.admonition.body.informative.markdown"
-            }
+            "1": { "name": "entity.other.attribute-name.afm.markdown" },
+            "2": { "name": "punctuation.separator.key-value.afm.markdown" },
+            "3": { "name": "string.unquoted.afm.attribute-value.markdown" }
           }
         }
       ]
@@ -266,6 +266,9 @@
       "name": "meta.afm.block.admonition.positive.markdown",
       "begin": "^(\\s*>\\s*)(\\[!)(TIP|SUCCESS)\\b([^\\]\\r\\n]*)(\\])",
       "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.afm.blockquote.positive.markdown"
+        },
         "2": {
           "name": "punctuation.definition.afm.begin.markdown"
         },
@@ -279,18 +282,13 @@
           "name": "punctuation.definition.afm.end.markdown"
         }
       },
-      "end": "^(?!\\s*>)",
+      "while": "^\\s*>",
+      "whileCaptures": {
+        "0": { "name": "punctuation.definition.afm.blockquote.positive.markdown" }
+      },
       "patterns": [
         {
           "include": "#afm-fenced-code-in-admonition-blockquote"
-        },
-        {
-          "match": "^(\\s*>\\s?)(?!\\[!)(.+)$",
-          "captures": {
-            "2": {
-              "name": "meta.afm.admonition.body.positive.markdown"
-            }
-          }
         }
       ]
     },
@@ -321,6 +319,9 @@
       "name": "meta.afm.block.admonition.caution.markdown",
       "begin": "^(\\s*>\\s*)(\\[!)(IMPORTANT|CAUTION)\\b([^\\]\\r\\n]*)(\\])",
       "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.afm.blockquote.caution.markdown"
+        },
         "2": {
           "name": "punctuation.definition.afm.begin.markdown"
         },
@@ -334,18 +335,13 @@
           "name": "punctuation.definition.afm.end.markdown"
         }
       },
-      "end": "^(?!\\s*>)",
+      "while": "^\\s*>",
+      "whileCaptures": {
+        "0": { "name": "punctuation.definition.afm.blockquote.caution.markdown" }
+      },
       "patterns": [
         {
           "include": "#afm-fenced-code-in-admonition-blockquote"
-        },
-        {
-          "match": "^(\\s*>\\s?)(?!\\[!)(.+)$",
-          "captures": {
-            "2": {
-              "name": "meta.afm.admonition.body.caution.markdown"
-            }
-          }
         }
       ]
     },
@@ -376,6 +372,9 @@
       "name": "meta.afm.block.admonition.negative.markdown",
       "begin": "^(\\s*>\\s*)(\\[!)(WARNING|ERROR)\\b([^\\]\\r\\n]*)(\\])",
       "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.afm.blockquote.negative.markdown"
+        },
         "2": {
           "name": "punctuation.definition.afm.begin.markdown"
         },
@@ -389,18 +388,13 @@
           "name": "punctuation.definition.afm.end.markdown"
         }
       },
-      "end": "^(?!\\s*>)",
+      "while": "^\\s*>",
+      "whileCaptures": {
+        "0": { "name": "punctuation.definition.afm.blockquote.negative.markdown" }
+      },
       "patterns": [
         {
           "include": "#afm-fenced-code-in-admonition-blockquote"
-        },
-        {
-          "match": "^(\\s*>\\s?)(?!\\[!)(.+)$",
-          "captures": {
-            "2": {
-              "name": "meta.afm.admonition.body.negative.markdown"
-            }
-          }
         }
       ]
     },
@@ -431,6 +425,9 @@
       "name": "meta.afm.block.admonition.neutral.markdown",
       "begin": "^(\\s*>\\s*)(\\[!)(MORELIKETHIS)\\b([^\\]\\r\\n]*)(\\])",
       "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.afm.blockquote.neutral.markdown"
+        },
         "2": {
           "name": "punctuation.definition.afm.begin.markdown"
         },
@@ -444,18 +441,13 @@
           "name": "punctuation.definition.afm.end.markdown"
         }
       },
-      "end": "^(?!\\s*>)",
+      "while": "^\\s*>",
+      "whileCaptures": {
+        "0": { "name": "punctuation.definition.afm.blockquote.neutral.markdown" }
+      },
       "patterns": [
         {
           "include": "#afm-fenced-code-in-admonition-blockquote"
-        },
-        {
-          "match": "^(\\s*>\\s?)(?!\\[!)(.+)$",
-          "captures": {
-            "2": {
-              "name": "meta.afm.admonition.body.neutral.markdown"
-            }
-          }
         }
       ]
     },
@@ -629,12 +621,7 @@
           "name": "punctuation.definition.afm.end.markdown"
         }
       },
-      "patterns": [
-        {
-          "name": "string.unquoted.afm.macro.value.markdown",
-          "match": "[^\\]\\s][^\\]]*"
-        }
-      ]
+      "patterns": []
     },
     "afm-block-or-inline-tag": {
       "name": "meta.afm.tag.markdown",

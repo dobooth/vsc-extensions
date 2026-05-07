@@ -148,6 +148,24 @@ export function createAdobeMarkdownIt(sourceFsPath: string): MarkdownIt {
     return true;
   });
 
+  md.inline.ruler.push('adobe-strip-attr-block', function (
+    state: any,
+    silent: boolean
+  ): boolean {
+    if (state.src.charCodeAt(state.pos) !== 0x7b /* { */) {
+      return false;
+    }
+    const m = /^\{[^}\n]+\}/.exec(state.src.slice(state.pos));
+    if (!m) {
+      return false;
+    }
+    if (!silent) {
+      state.push('html_inline', '', 0).content = '';
+    }
+    state.pos += m[0].length;
+    return true;
+  });
+
   const alertTypes: { [key: string]: { cls: string; label: string } } = {
     NOTE: { cls: 'note', label: 'NOTE' },
     TIP: { cls: 'tip', label: 'TIP' },

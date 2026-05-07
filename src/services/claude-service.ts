@@ -172,6 +172,7 @@ class ClaudeCliClient implements ClaudeClient {
       proc.stdin.write(fullPrompt, 'utf8');
       proc.stdin.end();
 
+      let errText = '';
       let buffer = '';
       proc.stdout.on('data', (chunk: Buffer) => {
         buffer += chunk.toString('utf8');
@@ -198,7 +199,6 @@ class ClaudeCliClient implements ClaudeClient {
         }
       });
 
-      let errText = '';
       proc.stderr.on('data', (chunk: Buffer) => { errText += chunk.toString('utf8'); });
 
       proc.on('close', (code: number) => {

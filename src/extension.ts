@@ -5,7 +5,6 @@ import {
   workspace,
   commands,
   window,
-  ConfigurationTarget,
 } from 'vscode';
 import { GhecPanelProvider } from './panels/ghec-panel';
 import { AdobePreviewManager } from './panels/adobe-preview-panel';
@@ -17,111 +16,15 @@ import { generateTimestamp, output } from './lib/common';
 import { register } from './lib/commands';
 import { findAndReplaceTargetExpressions } from './lib/utiity';
 
-const AFM_TOKEN_RULES = [
-  {
-    scope: [
-      'punctuation.definition.afm.begin.markdown',
-      'punctuation.definition.afm.end.markdown',
-      'punctuation.definition.afm.attributes.begin.markdown',
-      'punctuation.definition.afm.attributes.end.markdown',
-      'punctuation.definition.afm.video-url.begin.markdown',
-      'punctuation.definition.afm.video-url.end.markdown',
-      'keyword.other.afm.macro.markdown',
-    ],
-    settings: { foreground: '#999999' },
-  },
-  {
-    scope: [
-      'keyword.other.afm.admonition.informative.markdown',
-      'string.quoted.double.afm.value.admonition.informative.markdown',
-      'string.unquoted.afm.value.admonition.informative.markdown',
-    ],
-    settings: { foreground: '#1473E6', fontStyle: 'bold' },
-  },
-  {
-    scope: [
-      'keyword.other.afm.admonition.positive.markdown',
-      'string.quoted.double.afm.value.admonition.positive.markdown',
-      'string.unquoted.afm.value.admonition.positive.markdown',
-    ],
-    settings: { foreground: '#268E6C', fontStyle: 'bold' },
-  },
-  {
-    scope: [
-      'keyword.other.afm.admonition.caution.markdown',
-      'string.quoted.double.afm.value.admonition.caution.markdown',
-      'string.unquoted.afm.value.admonition.caution.markdown',
-    ],
-    settings: { foreground: '#C07B15', fontStyle: 'bold' },
-  },
-  {
-    scope: [
-      'keyword.other.afm.admonition.negative.markdown',
-      'string.quoted.double.afm.value.admonition.negative.markdown',
-      'string.unquoted.afm.value.admonition.negative.markdown',
-    ],
-    settings: { foreground: '#D7373F', fontStyle: 'bold' },
-  },
-  {
-    scope: [
-      'keyword.other.afm.admonition.neutral.markdown',
-      'string.quoted.double.afm.value.admonition.neutral.markdown',
-      'string.unquoted.afm.value.admonition.neutral.markdown',
-    ],
-    settings: { foreground: '#767676', fontStyle: 'bold' },
-  },
-  {
-    scope: [
-      'keyword.other.afm.tag.markdown',
-      'string.quoted.double.afm.value.markdown',
-      'string.unquoted.afm.value.markdown',
-      'string.unquoted.afm.collapsible.title.markdown',
-    ],
-    settings: { foreground: '#5C6BC0' },
-  },
-  {
-    scope: 'keyword.other.afm.collapsible.markdown',
-    settings: { foreground: '#7B61FF', fontStyle: 'bold' },
-  },
-  {
-    scope: 'string.other.link.afm.value.markdown',
-    settings: { foreground: '#1473E6' },
-  },
-  {
-    scope: 'entity.other.attribute-name.afm.markdown',
-    settings: { foreground: '#5C6BC0' },
-  },
-  {
-    scope: 'string.unquoted.afm.attribute-value.markdown',
-    settings: { foreground: '#267F99' },
-  },
-];
-
-async function ensureAfmTokenColors(): Promise<void> {
-  const config = workspace.getConfiguration('editor');
-  const current = (config.get<Record<string, any>>('tokenColorCustomizations')) ?? {};
-  const existing: any[] = current.textMateRules ?? [];
-  const filtered = existing.filter((rule: any) => {
-    const scopes: string[] = Array.isArray(rule.scope) ? rule.scope : [rule.scope ?? ''];
-    return !scopes.some((s: string) => s.includes('.afm.'));
-  });
-  await config.update(
-    'tokenColorCustomizations',
-    { ...current, textMateRules: [...filtered, ...AFM_TOKEN_RULES] },
-    ConfigurationTarget.Global
-  );
-}
-
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: ExtensionContext) {
-  var extensionPath: string = context.extensionPath;
+  const extensionPath: string = context.extensionPath;
   const { msTimeValue } = generateTimestamp();
   output.appendLine(
     `[${msTimeValue}] - Activating Adobe Flavored Markdown extension at ${extensionPath}`
   );
-  void ensureAfmTokenColors();
-  
+
   output.appendLine(`[${msTimeValue}] - Activating docs linting extension.`);
   // Markdown Lint custom rule check
   checkMarkdownlintCustomProperty();

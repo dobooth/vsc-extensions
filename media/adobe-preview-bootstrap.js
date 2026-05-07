@@ -52,7 +52,7 @@
   }
 
   function sendDiagnostics(reason) {
-    if (!window.__ADOBE_PREVIEW_DIAGNOSTICS__) {
+    if (document.documentElement.dataset.diagnostics !== 'true') {
       return;
     }
     function post() {

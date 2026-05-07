@@ -28,6 +28,14 @@
       "editor.tokenColorCustomizations": {
         "textMateRules": [
           {
+            "scope": "markup.quote.markdown",
+            "settings": { "foreground": "#D4D4D4" }
+          },
+          {
+            "scope": "punctuation.definition.quote.begin.markdown",
+            "settings": { "foreground": "#5C6BC0" }
+          },
+          {
             "scope": [
               "punctuation.definition.afm.begin.markdown",
               "punctuation.definition.afm.end.markdown",
@@ -40,7 +48,7 @@
           },
           {
             "scope": "keyword.other.afm.macro.markdown",
-            "settings": { "foreground": "#777777" }
+            "settings": { "foreground": "#777777", "fontStyle": "" }
           },
           {
             "scope": "string.unquoted.afm.macro.value.markdown",
@@ -48,6 +56,7 @@
           },
           {
             "scope": [
+              "punctuation.definition.afm.blockquote.informative.markdown",
               "keyword.other.afm.admonition.informative.markdown",
               "string.quoted.double.afm.value.admonition.informative.markdown",
               "string.unquoted.afm.value.admonition.informative.markdown"
@@ -55,11 +64,8 @@
             "settings": { "foreground": "#1473E6", "fontStyle": "bold" }
           },
           {
-            "scope": "meta.afm.admonition.body.informative.markdown",
-            "settings": { "foreground": "#1473E6", "fontStyle": "" }
-          },
-          {
             "scope": [
+              "punctuation.definition.afm.blockquote.positive.markdown",
               "keyword.other.afm.admonition.positive.markdown",
               "string.quoted.double.afm.value.admonition.positive.markdown",
               "string.unquoted.afm.value.admonition.positive.markdown"
@@ -67,11 +73,8 @@
             "settings": { "foreground": "#268E6C", "fontStyle": "bold" }
           },
           {
-            "scope": "meta.afm.admonition.body.positive.markdown",
-            "settings": { "foreground": "#268E6C", "fontStyle": "" }
-          },
-          {
             "scope": [
+              "punctuation.definition.afm.blockquote.caution.markdown",
               "keyword.other.afm.admonition.caution.markdown",
               "string.quoted.double.afm.value.admonition.caution.markdown",
               "string.unquoted.afm.value.admonition.caution.markdown"
@@ -79,32 +82,13 @@
             "settings": { "foreground": "#E68619", "fontStyle": "bold" }
           },
           {
-            "scope": "meta.afm.admonition.body.caution.markdown",
-            "settings": { "foreground": "#E68619", "fontStyle": "" }
-          },
-          {
             "scope": [
+              "punctuation.definition.afm.blockquote.negative.markdown",
               "keyword.other.afm.admonition.negative.markdown",
               "string.quoted.double.afm.value.admonition.negative.markdown",
               "string.unquoted.afm.value.admonition.negative.markdown"
             ],
             "settings": { "foreground": "#D7373F", "fontStyle": "bold" }
-          },
-          {
-            "scope": "meta.afm.admonition.body.negative.markdown",
-            "settings": { "foreground": "#D7373F", "fontStyle": "" }
-          },
-          {
-            "scope": [
-              "keyword.other.afm.admonition.neutral.markdown",
-              "string.quoted.double.afm.value.admonition.neutral.markdown",
-              "string.unquoted.afm.value.admonition.neutral.markdown"
-            ],
-            "settings": { "foreground": "#1473E6", "fontStyle": "bold" }
-          },
-          {
-            "scope": "meta.afm.admonition.body.neutral.markdown",
-            "settings": { "foreground": "#1473E6", "fontStyle": "" }
           },
           {
             "scope": [
@@ -131,13 +115,6 @@
               "string.unquoted.afm.attribute-value.markdown"
             ],
             "settings": { "foreground": "#777777" }
-          },
-          {
-            "scope": [
-              "punctuation.definition.list.begin.markdown",
-              "beginning.punctuation.definition.list.markdown"
-            ],
-            "settings": { "foreground": "#268E6C" }
           }
         ]
       }
@@ -605,7 +582,26 @@
       }
     ],
     "menus": {
+      "explorer/context": [
+        {
+          "command": "adobeExl.openAdobePreview",
+          "when": "resourceExtname == '.md'",
+          "group": "1_adobe@1"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "adobeExl.openAdobePreview",
+          "when": "markdown:enabled",
+          "group": "1_adobe@1"
+        }
+      ],
       "editor/context": [
+        {
+          "command": "adobeExl.openAdobePreview",
+          "when": "markdown:enabled",
+          "group": "1_adobe@1"
+        },
         {
           "command": "md-shortcut.toggleBold",
           "when": "markdown:enabled",

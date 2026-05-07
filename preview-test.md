@@ -16,16 +16,6 @@ A horizontal bar graph visualization that displays the ROI or CPA performance by
 
 Undefined channels are included in the visualization but have no attributed conversions.
 
-## Local image and relative link
-
-These checks verify that **Adobe Preview** resolves workspace files in the custom webview.
-
-![Adobe logo (PNG)](./assets/img/adobe-red-logo.png)
-
-![SVG asset](./assets/img/info.svg)
-
-Relative link to another repo file: [README](README.md) (should open in the editor when clicked in the preview).
-
 ## Alert blocks
 
 >[!TIP]

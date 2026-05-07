@@ -1,4 +1,3 @@
-import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { createAdobeMarkdownIt } from '../preview/adobe-markdown-it';
@@ -13,63 +12,8 @@ import { output } from '../lib/common';
 
 const VIEW_TYPE = 'adobeExl.adobePreview';
 
-/**
- * Bundled WOFF2 under assets/fonts/preview/. Inlined as data: URLs in @font-face.
- * Total payload is on the order of ~100–150KB base64 in the webview HTML once per
- * panel load — acceptable; reliability beats shaving bytes. Separate font requests
- * in webviews are brittle (CSP / URI resolution); inlining avoids that class of bugs.
- */
-const PREVIEW_FONT_FACES: readonly {
-  family: string;
-  style: string;
-  weight: string;
-  path: string;
-}[] = [
-  {
-    family: 'Roboto',
-    style: 'normal',
-    weight: '400',
-    path: 'assets/fonts/preview/roboto-latin-400-normal.woff2',
-  },
-  {
-    family: 'Roboto',
-    style: 'italic',
-    weight: '400',
-    path: 'assets/fonts/preview/roboto-latin-400-italic.woff2',
-  },
-  {
-    family: 'Roboto',
-    style: 'normal',
-    weight: '500',
-    path: 'assets/fonts/preview/roboto-latin-500-normal.woff2',
-  },
-  {
-    family: 'Roboto',
-    style: 'normal',
-    weight: '700',
-    path: 'assets/fonts/preview/roboto-latin-700-normal.woff2',
-  },
-  {
-    family: 'Roboto Mono',
-    style: 'normal',
-    weight: '400',
-    path: 'assets/fonts/preview/roboto-mono-latin-400-normal.woff2',
-  },
-  {
-    family: 'Roboto Mono',
-    style: 'normal',
-    weight: '500',
-    path: 'assets/fonts/preview/roboto-mono-latin-500-normal.woff2',
-  },
-  {
-    family: 'Roboto Mono',
-    style: 'normal',
-    weight: '600',
-    path: 'assets/fonts/preview/roboto-mono-latin-600-normal.woff2',
-  },
-];
-
 const PREVIEW_STYLES = [
+  'assets/styles/fonts.css',
   'assets/styles/base.css',
   'assets/styles/adobe-preview.css',
 ];
@@ -109,44 +53,24 @@ function webviewUri(
     .toString();
 }
 
-function buildPreviewFontFacesDataUrlStyle(extensionUri: vscode.Uri): string {
-  const rules = PREVIEW_FONT_FACES.map((f) => {
-    const fontPath = vscode.Uri.joinPath(
-      extensionUri,
-      ...f.path.split('/')
-    ).fsPath;
-    const buf = fs.readFileSync(fontPath);
-    const dataUrl = `data:font/woff2;base64,${buf.toString('base64')}`;
-    return (
-      `@font-face{font-family:"${f.family}";` +
-      `font-style:${f.style};font-weight:${f.weight};` +
-      `font-display:swap;src:url(${JSON.stringify(dataUrl)}) format("woff2");}`
-    );
-  }).join('');
-  return `<style>${rules}</style>`;
-}
-
 function buildPreviewHtml(
   webview: vscode.Webview,
   extensionUri: vscode.Uri,
   options?: { diagnosticMode?: boolean }
 ): string {
   const diagnosticMode = options?.diagnosticMode === true;
-  const diagnosticBootstrapFlag = `<script>window.__ADOBE_PREVIEW_DIAGNOSTICS__=${diagnosticMode};</script>`;
   const csp = webview.cspSource;
-  const fontFaces = buildPreviewFontFacesDataUrlStyle(extensionUri);
   const styleHrefs = PREVIEW_STYLES.map((p) => webviewUri(webview, extensionUri, p));
   const bootstrap = webviewUri(webview, extensionUri, 'media/adobe-preview-bootstrap.js');
   const scriptSrcs = PREVIEW_SCRIPTS.map((p) => webviewUri(webview, extensionUri, p));
 
-  const styleTags =
-    fontFaces + '\n' + styleHrefs.map((href) => `<link rel="stylesheet" href="${href}">`).join('\n');
+  const styleTags = styleHrefs.map((href) => `<link rel="stylesheet" href="${href}">`).join('\n');
   const prismScripts = scriptSrcs
     .map((src) => `<script src="${src}"></script>`)
     .join('\n');
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-diagnostics="${diagnosticMode}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -155,7 +79,6 @@ ${styleTags}
 </head>
 <body class="vscode-body">
 <div id="adobe-preview-root"></div>
-${diagnosticBootstrapFlag}
 <script src="${bootstrap}"></script>
 ${prismScripts}
 </body>
