@@ -18,6 +18,25 @@
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tab));
   }
 
+  /** Tab + primary actions without inline onclick (strict CSP script-src works in VS Code and Cursor). */
+  (function wirePanelChrome() {
+    const root = document.getElementById('mainPanel');
+    if (!root) return;
+    root.addEventListener('click', function (e) {
+      const tabBtn = e.target.closest('.sp-tab');
+      if (tabBtn && tabBtn.dataset.tab) {
+        switchTab(tabBtn.dataset.tab);
+        return;
+      }
+      const act = e.target.closest('[data-exl-action]');
+      if (!act) return;
+      const a = act.getAttribute('data-exl-action');
+      if (a === 'pushCheck') pushCheck();
+      else if (a === 'autoFix') autoFix();
+      else if (a === 'commitAndPush') commitAndPush();
+    });
+  })();
+
   function formatDuration(ms) {
     if (!ms) return '';
     const s = Math.round(ms / 1000);

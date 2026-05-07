@@ -670,12 +670,14 @@ export class GhecPanelProvider implements vscode.WebviewViewProvider {
       vscode.Uri.joinPath(this._context.extensionUri, 'media', 'ghec-build-panel.css')
     );
     const csp = webview.cspSource;
+    // Webview CSP: script only from extension (no inline handlers); style allows inline attributes
+    // on static markup. Same model works in VS Code and Cursor (shared webview/Electron stack).
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${csp} 'unsafe-inline'; script-src ${csp} 'unsafe-inline';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${csp} 'unsafe-inline'; img-src ${csp} data:; font-src ${csp}; script-src ${csp};">
 <link rel="stylesheet" href="${styleUri}">
 </head>
 <body>
@@ -695,8 +697,8 @@ export class GhecPanelProvider implements vscode.WebviewViewProvider {
 <div id="bannerError" class="sp-banner"></div>
 
 <div class="sp-tabs">
-  <button class="sp-tab active" data-tab="status" onclick="switchTab('status')">Status</button>
-  <button class="sp-tab" data-tab="build" onclick="switchTab('build')">Build</button>
+  <button type="button" class="sp-tab active" data-tab="status">Status</button>
+  <button type="button" class="sp-tab" data-tab="build">Build</button>
 </div>
 
 <!-- ── Status Tab ─────────────────────────────────────────────────────────── -->
@@ -720,8 +722,8 @@ export class GhecPanelProvider implements vscode.WebviewViewProvider {
 
   <div class="pipeline-step-actions">
     <div class="action-row">
-      <button class="btn" onclick="pushCheck()">⬆ Push &amp; Check</button>
-      <button class="btn btn-secondary" onclick="autoFix()">⚙ Auto Fix</button>
+      <button type="button" class="btn" data-exl-action="pushCheck">⬆ Push &amp; Check</button>
+      <button type="button" class="btn btn-secondary" data-exl-action="autoFix">⚙ Auto Fix</button>
     </div>
     <div class="pipeline-desc"><b>Push &amp; Check</b> — push branch, monitor CI run, show errors.</div>
     <div class="pipeline-desc"><b>Auto Fix</b> — iterate: push → AI fix → commit until green.</div>
@@ -751,7 +753,7 @@ export class GhecPanelProvider implements vscode.WebviewViewProvider {
   <div id="errorList"><span class="sp-empty">No errors.</span></div>
   <div id="commitBar" class="commit-bar" style="display:none">
     <span id="commitBarLabel">0 fix(es) ready</span>
-    <button class="btn btn-primary btn-sm" onclick="commitAndPush()">Commit &amp; push ↑</button>
+    <button type="button" class="btn btn-primary btn-sm" data-exl-action="commitAndPush">Commit &amp; push ↑</button>
   </div>
 </div>
 
