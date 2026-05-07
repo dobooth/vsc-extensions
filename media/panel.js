@@ -66,7 +66,7 @@
     }
     const hasCI = summary.runId > 0;
     let html = hasCI
-      ? '<div style="font-size:11px;color:var(--vscode-descriptionForeground);margin-bottom:4px">Run #' + summary.runId + '</div>'
+      ? '<div class="exl-run-label">Run #' + summary.runId + '</div>'
       : '';
 
     // Parsed link errors
@@ -77,7 +77,7 @@
       html += '<div class="' + rowClass + '" data-file="' + escAttr(err.filepath) + '" data-line="' + escAttr(err.lineno) + '">';
       html += '<span class="error-file open-file" data-file="' + escAttr(err.filepath) + '" data-line="' + err.lineno + '">' + escHtml(err.filepath) + ':' + err.lineno + checkmark + '</span>';
       if (isLocal) {
-        html += ' <span class="fix-badge" style="background:var(--sp-notice-bg);color:var(--sp-notice)">local</span>';
+        html += ' <span class="fix-badge fix-badge-local">local</span>';
       }
       if (err.rule) { html += ' <span class="error-rule">' + escHtml(err.rule) + '</span>'; }
       if (err.active) {
@@ -117,18 +117,18 @@
     // Raw stage failure lines (linting, test failures, etc.)
     if (summary.unparsed.length) {
       if (summary.errors.length) {
-        html += '<div style="margin-top:8px;border-top:1px solid var(--vscode-widget-border);padding-top:6px"></div>';
+        html += '<div class="exl-divider"></div>';
       }
       let lastStage = '';
       for (const u of summary.unparsed) {
         if (u.stage !== lastStage) {
           lastStage = u.stage;
           const stageLabel = u.loglink
-            ? '<span class="open-url" data-url="' + escAttr(u.loglink) + '" style="cursor:pointer;text-decoration:underline">' + escHtml(u.stage) + '</span>'
+            ? '<span class="open-url" data-url="' + escAttr(u.loglink) + '">' + escHtml(u.stage) + '</span>'
             : escHtml(u.stage);
-          html += '<div style="font-size:11px;color:var(--vscode-descriptionForeground);margin:4px 0 2px">' + stageLabel + '</div>';
+          html += '<div class="exl-stage-label">' + stageLabel + '</div>';
         }
-        html += '<div class="error-row" style="font-family:var(--vscode-editor-font-family);white-space:pre-wrap;word-break:break-all">' + escHtml(u.line) + '</div>';
+        html += '<div class="error-row error-row-raw">' + escHtml(u.line) + '</div>';
       }
     }
 
@@ -172,6 +172,12 @@
     const filepath = el.dataset.file;
     const line = parseInt(el.dataset.line) || 0;
     if (filepath) vscode.postMessage({ command: 'openFile', filepath, line });
+  });
+
+  document.addEventListener('click', function(e) {
+    const el = e.target.closest('.open-url');
+    if (!el || !el.dataset.url) return;
+    openUrl(el.dataset.url);
   });
 
   // Delegated click handler for Apply / De-link fix buttons
@@ -288,9 +294,14 @@
           row.querySelectorAll('.fix-action-btn').forEach(b => b.remove());
           const diffEl = row.querySelector('.diff-pre');
           if (diffEl) { diffEl.remove(); }
+          row.style.opacity = '0.45';
         }
         break;
       }
+
+      case 'commitDone':
+        appendLog('Committed and pushed. Monitoring CI…', false);
+        break;
 
       case 'fixFilesStarting': {
         const fc = document.getElementById('fixCards');
@@ -349,8 +360,8 @@
               + (fixes > 0 ? '<span class="fix-card-badge fix-card-badge-fixed">' + fixes + ' fixed</span>' : '')
               + '<span class="fix-card-badge fix-card-badge-fail">' + notfound + ' not found</span>';
           } else {
-            row.innerHTML = '<span class="fix-card-icon" style="color:var(--vscode-descriptionForeground)">·</span>'
-              + '<span class="fix-card-file" style="color:var(--vscode-descriptionForeground)">' + escHtml(file) + '</span>'
+            row.innerHTML = '<span class="fix-card-icon exl-muted">·</span>'
+              + '<span class="fix-card-file exl-muted">' + escHtml(file) + '</span>'
               + '<span class="fix-card-badge fix-card-badge-neutral">no changes</span>';
           }
         });
