@@ -30,6 +30,7 @@ __BETA_ACCORDIAN
 __BETA_TAB
 
 # Adobe product and brand names
+Agentic
 Bizible
 LaunchPoint
 Marketo

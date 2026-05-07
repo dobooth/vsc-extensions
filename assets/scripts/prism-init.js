@@ -1,7 +1,7 @@
 /**
- * Client-side Prism syntax highlighting for VS Code markdown preview.
- * Runs after each preview render. Prism core + languages are loaded
- * via markdown.previewScripts in package.json before this file.
+ * Client-side Prism syntax highlighting for Adobe Preview (custom webview)
+ * and legacy VS Code built-in markdown preview if scripts are injected there.
+ * Re-run after content updates via CustomEvent or vscode.markdown.updateContent.
  *
  * For languages not explicitly bundled, falls back to the `clike` grammar
  * (covers C-like syntax: keywords, strings, comments, numbers) so the block
@@ -108,6 +108,11 @@
   // VS Code fires the 'vscode.markdown.updateContent' custom DOM event after
   // it injects new HTML — this is the correct hook for preview scripts.
   window.addEventListener('vscode.markdown.updateContent', function () {
+    highlightAll();
+    initTabs();
+  });
+
+  window.addEventListener('adobe-preview-content-updated', function () {
     highlightAll();
     initTabs();
   });

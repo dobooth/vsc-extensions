@@ -5,12 +5,15 @@
  * rules have specificity (0,1,1) and beat VS Code's built-in markdown CSS
  * which loads *after* extension styles and uses bare element selectors (0,0,1).
  *
- * Typography values sourced from experienceleague.adobe.com/styles/styles.css:
+ * Preview uses bundled Roboto / Roboto Mono (Experience League stack); see
+ * preview-fonts.css (loaded as a webview-linked stylesheet).
+ * Scale/colors still align with experienceleague.adobe.com patterns where applicable:
  *   - Heading sizes: Spectrum mobile scale (H1=36px … H5=16px)
  *   - Link color: #0268e3  (--non-spectrum-link)
  *   - Body/para:  #222     (--spectrum-gray-800)
  *   - H1/H2:      #4a4a4a  (--non-spectrum-grey)
- *   - Code font:  "Roboto Mono" (--fixed-font-family)
+ *   - Body/headings font: Roboto (bundled WOFF2, Apache 2.0)
+ *   - Code font: Roboto Mono (bundled WOFF2, Apache 2.0)
  *
  * Alert box rendering:
  *   The adobe-alerts markdown-it core rule produces:
@@ -20,20 +23,63 @@
  */
 
 /* ─── Body ────────────────────────────────────────────────────────────────── */
+/*
+ * Lock the document to light UI semantics even when VS Code uses a dark theme.
+ * Otherwise the webview can use a dark color scheme / canvas, which dims raster
+ * images or makes transparent PNGs read as a flat gray slab.
+ */
+html {
+  color-scheme: light;
+}
+
+/* Webviews inject theme variables; force readable doc colors for Adobe Preview. */
+body.vscode-body {
+  color: #1a1a1a !important;
+  background-color: #ffffff !important;
+}
+
+#adobe-preview-root {
+  background-color: #ffffff;
+}
+
+/* Raster / inline images: undo host or forced-colors adjustments that read as “all gray”. */
+.vscode-body img,
+.vscode-body picture {
+  opacity: 1 !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+}
+
+@media (forced-colors: active) {
+  .vscode-body img,
+  .vscode-body picture {
+    forced-color-adjust: none;
+  }
+}
+
 .vscode-body {
-  font-family: "Adobe Clean", adobe-clean, "Source Sans Pro",
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu,
-    "Trebuchet MS", "Lucida Grande", sans-serif;
+  font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Ubuntu, sans-serif;
   font-size: 16px;
   line-height: 1.6;
-  color: #222;
+  color: #1a1a1a;
 }
 
 /* ─── Paragraphs ──────────────────────────────────────────────────────────── */
 .vscode-body p {
   font-size: 1rem;
   line-height: 1.6;
-  color: #222;
+  color: #1a1a1a;
+}
+
+/* Lists: host / injected preview CSS often sets ul/ol to descriptionForeground gray. */
+.vscode-body ul,
+.vscode-body ol,
+.vscode-body li,
+.vscode-body li > p,
+.vscode-body dd,
+.vscode-body dd > p {
+  color: #1a1a1a !important;
 }
 
 /* ─── Headings — EXL Spectrum mobile scale ────────────────────────────────── */
@@ -43,8 +89,8 @@
 .vscode-body h4,
 .vscode-body h5,
 .vscode-body h6 {
-  font-family: "Adobe Clean", adobe-clean, "Source Sans Pro",
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, sans-serif;
+  font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Ubuntu, sans-serif;
   font-weight: 700;
   line-height: 1.3;
 }
@@ -87,6 +133,39 @@
   margin-bottom: 0.375rem;
 }
 
+/*
+ * Hide heading permalink / “link to fragment” affordances (plugins, host UI, GitHub-style).
+ * Scope to #adobe-preview-root so we beat generic .vscode-body rules from the shell.
+ */
+#adobe-preview-root a.header-anchor,
+#adobe-preview-root .header-anchor,
+#adobe-preview-root a.octicon-link,
+#adobe-preview-root a.user-content-anchor {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  pointer-events: none !important;
+}
+
+#adobe-preview-root h1 a.anchor,
+#adobe-preview-root h2 a.anchor,
+#adobe-preview-root h3 a.anchor,
+#adobe-preview-root h4 a.anchor,
+#adobe-preview-root h5 a.anchor,
+#adobe-preview-root h6 a.anchor {
+  display: none !important;
+}
+
+/* Some hosts inject an SVG or icon font next to headings */
+#adobe-preview-root :is(h1, h2, h3, h4, h5, h6) .octicon,
+#adobe-preview-root :is(h1, h2, h3, h4, h5, h6) > svg:first-child,
+#adobe-preview-root :is(h1, h2, h3, h4, h5, h6) > svg:last-child {
+  display: none !important;
+}
+
 /* ─── Links ───────────────────────────────────────────────────────────────── */
 .vscode-body a {
   color: #0268e3;   /* --non-spectrum-link */
@@ -100,8 +179,7 @@
 /* ─── Inline code ─────────────────────────────────────────────────────────── */
 /* Overrides the Bulma red (#da1039) from docs.css */
 .vscode-body code {
-  font-family: "Roboto Mono", "Source Code Pro", menlo, consolas,
-    "Liberation Mono", monospace;
+  font-family: "Roboto Mono", menlo, consolas, "Liberation Mono", monospace;
   font-size: 0.875em;
   background-color: #f5f5f5;
   color: #323232;
@@ -109,13 +187,13 @@
   padding: 0.15em 0.4em;
 }
 
-/* ─── Code blocks ─────────────────────────────────────────────────────────── */
+/* ─── Code blocks (light surface — matches base.css / readable in webview) ─── */
 .vscode-body pre {
-  font-family: "Roboto Mono", "Source Code Pro", menlo, consolas,
-    "Liberation Mono", monospace;
+  font-family: "Roboto Mono", menlo, consolas, "Liberation Mono", monospace;
   font-size: 0.875rem;
-  background-color: #1d1f21 !important;  /* --non-spectrum-jet-black */
-  color: #c5c8c6;                         /* --non-spectrum-silver-chalice */
+  background-color: #f6f8fa !important;
+  color: #24292e !important;
+  border: 1px solid #e1e4e8;
   border-radius: 4px;
   padding: 1rem 1.5rem;
   line-height: 1.5;
@@ -126,7 +204,7 @@
   padding: 0;
   border-radius: 0;
   font-size: 1em;
-  color: #c5c8c6;  /* --non-spectrum-silver-chalice: overrides .vscode-body code dark charcoal */
+  color: #24292e !important;
 }
 
 /* ─── Tables ──────────────────────────────────────────────────────────────── */
@@ -140,11 +218,12 @@
   border: 1px solid #e8e8e8 !important;
   padding: 0.5rem 0.75rem;
   text-align: left;
+  color: #1a1a1a;
 }
 .vscode-body table th {
   background-color: #f5f5f5;
   font-weight: 700;
-  color: #222;
+  color: #1a1a1a;
 }
 .vscode-body table tbody tr:nth-child(even) {
   background-color: #fafafa;
@@ -159,7 +238,8 @@
   border: 1px solid #e0e0e0;
   border-left-width: 17px;
   margin: 1.25rem 0;
-  color: inherit;
+  /* Body copy: always neutral (label color is only on ::before). */
+  color: #1a1a1a !important;
   background-color: #fafafa !important;
   box-shadow: none !important;  /* suppress docs.css white-card elevation */
 }
@@ -284,10 +364,8 @@
   color: #0f2d4e;
 }
 
-/* ─── Adobe inline macro brackets ([!DNL …] / [!UICONTROL …]) ────────────── */
-.vscode-body .exl-macro-meta {
-  color: #999;
-}
+/* ─── Localization / inline [!TAG value] macros ───────────────────────────── */
+/* Preview renders only the value (plain html_inline); no extra classes. */
 
 /* ─── MORELIKETHIS ───────────────────────────────────────────────────────── */
 .vscode-body .extension.morelikethis {
@@ -295,7 +373,26 @@
   border-left-color: #1473E6 !important;
 }
 .vscode-body .extension.morelikethis::before { color: #1473E6; }
-.vscode-body .extension.morelikethis a { text-decoration: none; }
+/*
+ * EXL “More like this” list links: no underline in any state. Webviews / UA often
+ * set underlines via longhands (-webkit-text-decoration, text-decoration-line).
+ */
+.vscode-body .extension.morelikethis a:any-link,
+.vscode-body .extension.morelikethis li a,
+.vscode-body .extension.morelikethis ul a,
+.vscode-body .extension.morelikethis ol a,
+.vscode-body .extension.morelikethis a:hover,
+.vscode-body .extension.morelikethis a:focus,
+.vscode-body .extension.morelikethis a:focus-visible,
+.vscode-body .extension.morelikethis a:active {
+  text-decoration: none !important;
+  text-decoration-line: none !important;
+  -webkit-text-decoration: none !important;
+  text-underline-offset: 0 !important;
+  text-underline-position: unset !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
 
 /* ─── Shade boxes (>[!BEGINSHADEBOX] / >[!ENDSHADEBOX]) ──────────────────── */
 .vscode-body .shadebox {
@@ -430,55 +527,55 @@
   color: #0268e3;
 }
 
-/* ─── Prism token colors — Spectrum palette ───────────────────────────────── */
+/* ─── Prism token colors — light code background (#f6f8fa) ───────────────── */
 /* Comments ----------------------------------------------------------------- */
 .vscode-body pre code .token.comment,
 .vscode-body pre code .token.prolog,
-.vscode-body pre code .token.cdata         { color: #909090; font-style: italic; } /* spectrum-gray-500 */
-.vscode-body pre code .token.doctype       { color: #909090; }                     /* spectrum-gray-500 */
+.vscode-body pre code .token.cdata         { color: #6a737d; font-style: italic; }
+.vscode-body pre code .token.doctype       { color: #6a737d; }
 
 /* Structure / punctuation -------------------------------------------------- */
-.vscode-body pre code .token.punctuation   { color: #b1b1b1; }                     /* spectrum-gray-400 */
-.vscode-body pre code .token.operator      { color: #b1b1b1; }                     /* spectrum-gray-400 */
+.vscode-body pre code .token.punctuation   { color: #24292e; }
+.vscode-body pre code .token.operator      { color: #d73a49; }
 
 /* Tags & properties (HTML tags, JSON/JS keys, CSS properties) -------------- */
-.vscode-body pre code .token.tag           { color: #60d8f3; }                     /* spectrum-cyan-400 */
-.vscode-body pre code .token.property      { color: #65dad2; }                     /* spectrum-seafoam-400 */
-.vscode-body pre code .token.namespace     { color: #88e7fa; }                     /* spectrum-cyan-300 */
+.vscode-body pre code .token.tag           { color: #22863a; }
+.vscode-body pre code .token.property      { color: #005cc5; }
+.vscode-body pre code .token.namespace     { color: #6f42c1; }
 
 /* Attributes --------------------------------------------------------------- */
-.vscode-body pre code .token.attr-name     { color: #65dad2; }                     /* spectrum-seafoam-400 */
-.vscode-body pre code .token.attr-value    { color: #aef69d; }                     /* spectrum-celery-200 */
+.vscode-body pre code .token.attr-name     { color: #6f42c1; }
+.vscode-body pre code .token.attr-value    { color: #032f62; }
 
 /* Strings & chars ---------------------------------------------------------- */
 .vscode-body pre code .token.string,
 .vscode-body pre code .token.char,
-.vscode-body pre code .token.url           { color: #aef69d; }                     /* spectrum-celery-200 */
-.vscode-body pre code .token.entity        { color: #fbf198; }                     /* spectrum-yellow-100 */
+.vscode-body pre code .token.url           { color: #032f62; }
+.vscode-body pre code .token.entity        { color: #6f42c1; }
 
 /* Numbers & literals ------------------------------------------------------- */
-.vscode-body pre code .token.number        { color: #f592f3; }                     /* spectrum-fuchsia-500 */
-.vscode-body pre code .token.boolean       { color: #fbaef6; }                     /* spectrum-fuchsia-400 */
-.vscode-body pre code .token.constant      { color: #fbaef6; }                     /* spectrum-fuchsia-400 */
-.vscode-body pre code .token.symbol        { color: #cca4fd; }                     /* spectrum-purple-500 */
+.vscode-body pre code .token.number        { color: #005cc5; }
+.vscode-body pre code .token.boolean       { color: #005cc5; }
+.vscode-body pre code .token.constant      { color: #005cc5; }
+.vscode-body pre code .token.symbol        { color: #e36209; }
 
 /* Keywords ----------------------------------------------------------------- */
-.vscode-body pre code .token.keyword       { color: #96cefd; }                     /* spectrum-blue-400 */
-.vscode-body pre code .token.atrule        { color: #78bbfa; }                     /* spectrum-blue-500 */
+.vscode-body pre code .token.keyword       { color: #d73a49; }
+.vscode-body pre code .token.atrule        { color: #d73a49; }
 
 /* Functions & types -------------------------------------------------------- */
-.vscode-body pre code .token.function      { color: #ffa037; }                     /* spectrum-orange-500 */
-.vscode-body pre code .token.class-name    { color: #ffbb63; }                     /* spectrum-orange-400 */
-.vscode-body pre code .token.builtin       { color: #f68511; }                     /* spectrum-orange-600 */
+.vscode-body pre code .token.function      { color: #6f42c1; }
+.vscode-body pre code .token.class-name    { color: #6f42c1; }
+.vscode-body pre code .token.builtin       { color: #005cc5; }
 
 /* CSS selectors & important ------------------------------------------------ */
-.vscode-body pre code .token.selector      { color: #ff9b88; }                     /* spectrum-red-500 */
-.vscode-body pre code .token.important     { color: #ff7c65; font-weight: bold; }  /* spectrum-red-600 */
+.vscode-body pre code .token.selector      { color: #22863a; }
+.vscode-body pre code .token.important     { color: #d73a49; font-weight: bold; }
 
 /* Variables & regex -------------------------------------------------------- */
-.vscode-body pre code .token.variable      { color: #78bbfa; }                     /* spectrum-blue-500 */
-.vscode-body pre code .token.regex         { color: #f8e750; }                     /* spectrum-yellow-200 */
+.vscode-body pre code .token.variable      { color: #e36209; }
+.vscode-body pre code .token.regex         { color: #032f62; }
 
 /* Diff --------------------------------------------------------------------- */
-.vscode-body pre code .token.inserted      { color: #67dea8; }                     /* spectrum-green-400 */
-.vscode-body pre code .token.deleted       { color: #ff9b88; }                     /* spectrum-red-500 */
+.vscode-body pre code .token.inserted      { color: #22863a; }
+.vscode-body pre code .token.deleted       { color: #b31d28; }

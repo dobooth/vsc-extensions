@@ -43,37 +43,51 @@ export function function_(params, onError) {
     isLanding = false;
   }
 
-  // Extract the repository root directory from the file path
-  // All repos must have a "help" folder, so find the parent of "help"
-  // e.g., "authoring-guide.en/help/test-guide/demo.md" -> "authoring-guide.en"
-  const getRepoRoot = (filePath) => {
+  /**
+   * EXL repos always use a top-level `help/` tree. Absolute links are `/help/...`
+   * from the *repo root* (parent of `help`), not from process.cwd().
+   *
+   * @returns {string | null} Absolute path to repo root (directory containing `help`), or null
+   */
+  const getExlRepoRootAbsolute = (absDocPath) => {
+    const norm = path.normalize(absDocPath);
+    const parts = norm.split(path.sep).filter((p) => p.length > 0);
+    const helpIdx = parts.indexOf('help');
+    if (helpIdx <= 0) {
+      return null;
+    }
+    return path.join(...parts.slice(0, helpIdx));
+  };
+
+  // Legacy fallback when the doc path has no `help` segment (tests / odd layouts)
+  const getRepoRootRelativeToCwd = (filePath) => {
     const normalized = filePath.replace(/\\/g, '/');
     const cwd = process.cwd().replace(/\\/g, '/');
 
-    // If it's an absolute path, make it relative to cwd first
     let relativePath = normalized;
     if (path.isAbsolute(normalized)) {
       relativePath = path.relative(cwd, normalized).replace(/\\/g, '/');
     }
 
-    const parts = relativePath.split('/');
+    const parts = relativePath.split('/').filter((p) => p.length > 0);
 
-    // Find the "help" folder and return its parent
     const helpIndex = parts.indexOf('help');
+    if (helpIndex === 0) {
+      return '';
+    }
     if (helpIndex > 0) {
       return parts[helpIndex - 1];
     }
 
-    // Special case: if file is in test/ directory, use cwd as repo root
     if (parts[0] === 'test') {
       return '';
     }
 
-    // Fallback: assume first directory component is the repo root
     return parts[0];
   };
 
-  const repoRoot = getRepoRoot(params.name);
+  const exlRepoRootAbs = getExlRepoRootAbsolute(params.name);
+  const repoRoot = getRepoRootRelativeToCwd(params.name);
 
   // Matches [text](link) and ![alt](link)
   const linkRe = /!?\[[^\]]*\]\(([^)]+)\)/g;
@@ -146,9 +160,11 @@ export function function_(params, onError) {
       // Strip query/hash and extra text after space
       link = link.split("#")[0].split("?")[0].split(" ")[0];
 
-      // Resolve absolute links relative to the repo root, relative links to current dir
+      // `/help/...` and other root-absolute EXL paths: resolve from repo root (parent of help/)
       const fullPath = link.startsWith("/")
-        ? path.join(process.cwd(), repoRoot, link.replace(/^\/+/, ""))
+        ? exlRepoRootAbs != null
+          ? path.join(exlRepoRootAbs, link.replace(/^\/+/, ""))
+          : path.join(process.cwd(), repoRoot, link.replace(/^\/+/, ""))
         : path.join(docDir, link);
 
       if (!fs.existsSync(fullPath)) {

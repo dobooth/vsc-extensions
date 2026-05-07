@@ -1,9 +1,11 @@
 ---
-title: EXL preview test
-description: Examples of Adobe EXL markdown syntax for testing the extension preview.
+title: EXL Adobe Preview test
+description: Examples of Adobe EXL markdown syntax for testing the Adobe Preview webview.
 ---
 
-# EXL preview test
+# EXL Adobe Preview test
+
+Use the **Adobe Preview** command to open this file in the extension's dedicated preview panel (Command Palette: `Adobe Preview`, or the grid icon in the editor title bar when a Markdown file is focused). The built-in VS Code Markdown preview no longer applies EXL styling.
 
 >[!CONTEXTUALHELP]
 >id="models_insights_undefinedchannels"
@@ -14,11 +16,17 @@ A horizontal bar graph visualization that displays the ROI or CPA performance by
 
 Undefined channels are included in the visualization but have no attributed conversions.
 
-## Alert blocks
+## Local image and relative link
 
->[!NOTE]
->
->This is a note. Use notes for supplementary information the reader should be aware of.
+These checks verify that **Adobe Preview** resolves workspace files in the custom webview.
+
+![Adobe logo (PNG)](./assets/img/adobe-red-logo.png)
+
+![SVG asset](./assets/img/info.svg)
+
+Relative link to another repo file: [README](README.md) (should open in the editor when clicked in the preview).
+
+## Alert blocks
 
 >[!TIP]
 >
@@ -35,6 +43,18 @@ Undefined channels are included in the visualization but have no attributed conv
 >[!CAUTION]
 >
 >This is a caution. Use for information about potential risks.
+
+>[!ERROR]
+>
+>This is an error-style alert.
+
+>[!SUCCESS]
+>
+>This is a success-style alert.
+
+>[!INFO]
+>
+>This is an info alert.
 
 >[!ADMIN]
 >
@@ -116,21 +136,13 @@ Use collapsible sections for optional or advanced content that would otherwise c
 
 ## Localization macros
 
-Plain DNL: [!DNL Marketo]
+Plain DNL: [!DNL This won't be translated]
 
-Plain UICONTROL: [!UICONTROL Admin]
+Plain UICONTROL: [!UICONTROL MyUiControl]
 
-Bold UICONTROL (common): **[!UICONTROL Save]**
+Bolded: **[!UICONTROL Save]**
 
-Bold DNL: **[!DNL Adobe Analytics]**
-
-Italic DNL: *[!DNL Marketo Engage]*
-
-Italic UICONTROL: *[!UICONTROL Cancel]*
-
-Nav path: **[!UICONTROL Admin]** > **[!UICONTROL LaunchPoint]** > **[!UICONTROL New]**
-
-Sentence: In [!DNL Adobe Analytics], select **[!UICONTROL Workspace]** > **[!UICONTROL Create project]**.
+Italic: *[!DNL Not Translated]*
 
 ## Badges
 

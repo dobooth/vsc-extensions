@@ -1,7 +1,7 @@
 {
   "name": "adobe-markdown-authoring",
   "displayName": "ExL Markdown Authoring",
-  "description": "Integrated preview, linter validation, and keyboard shortcuts for Adobe Flavored Markdown.",
+  "description": "Adobe Preview (dedicated webview), linter validation, and keyboard shortcuts for Adobe Flavored Markdown.",
   "version": "2.2.0",
   "publisher": "AdobeExL",
   "engines": {
@@ -18,7 +18,9 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:markdown"
+    "onLanguage:markdown",
+    "onCommand:adobeExl.openAdobePreview",
+    "onCommand:adobeExl.openAdobePreviewDeveloperTools"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -34,13 +36,15 @@
               "punctuation.definition.afm.video-url.begin.markdown",
               "punctuation.definition.afm.video-url.end.markdown"
             ],
-            "settings": { "foreground": "#999999" }
+            "settings": { "foreground": "#777777" }
           },
           {
-            "scope": [
-              "keyword.other.afm.macro.markdown"
-            ],
-            "settings": { "foreground": "#999999" }
+            "scope": "keyword.other.afm.macro.markdown",
+            "settings": { "foreground": "#777777" }
+          },
+          {
+            "scope": "string.unquoted.afm.macro.value.markdown",
+            "settings": { "foreground": "#B5CEA8" }
           },
           {
             "scope": [
@@ -51,6 +55,10 @@
             "settings": { "foreground": "#1473E6", "fontStyle": "bold" }
           },
           {
+            "scope": "meta.afm.admonition.body.informative.markdown",
+            "settings": { "foreground": "#1473E6", "fontStyle": "" }
+          },
+          {
             "scope": [
               "keyword.other.afm.admonition.positive.markdown",
               "string.quoted.double.afm.value.admonition.positive.markdown",
@@ -59,12 +67,20 @@
             "settings": { "foreground": "#268E6C", "fontStyle": "bold" }
           },
           {
+            "scope": "meta.afm.admonition.body.positive.markdown",
+            "settings": { "foreground": "#268E6C", "fontStyle": "" }
+          },
+          {
             "scope": [
               "keyword.other.afm.admonition.caution.markdown",
               "string.quoted.double.afm.value.admonition.caution.markdown",
               "string.unquoted.afm.value.admonition.caution.markdown"
             ],
-            "settings": { "foreground": "#C07B15", "fontStyle": "bold" }
+            "settings": { "foreground": "#E68619", "fontStyle": "bold" }
+          },
+          {
+            "scope": "meta.afm.admonition.body.caution.markdown",
+            "settings": { "foreground": "#E68619", "fontStyle": "" }
           },
           {
             "scope": [
@@ -75,12 +91,20 @@
             "settings": { "foreground": "#D7373F", "fontStyle": "bold" }
           },
           {
+            "scope": "meta.afm.admonition.body.negative.markdown",
+            "settings": { "foreground": "#D7373F", "fontStyle": "" }
+          },
+          {
             "scope": [
               "keyword.other.afm.admonition.neutral.markdown",
               "string.quoted.double.afm.value.admonition.neutral.markdown",
               "string.unquoted.afm.value.admonition.neutral.markdown"
             ],
-            "settings": { "foreground": "#767676", "fontStyle": "bold" }
+            "settings": { "foreground": "#1473E6", "fontStyle": "bold" }
+          },
+          {
+            "scope": "meta.afm.admonition.body.neutral.markdown",
+            "settings": { "foreground": "#1473E6", "fontStyle": "" }
           },
           {
             "scope": [
@@ -93,19 +117,27 @@
           },
           {
             "scope": "keyword.other.afm.collapsible.markdown",
-            "settings": { "foreground": "#7B61FF", "fontStyle": "bold" }
+            "settings": { "foreground": "#9256D9", "fontStyle": "bold" }
           },
           {
             "scope": "string.other.link.afm.value.markdown",
             "settings": { "foreground": "#1473E6" }
           },
           {
-            "scope": "entity.other.attribute-name.afm.markdown",
-            "settings": { "foreground": "#5C6BC0" }
+            "scope": [
+              "meta.afm.attributes.markdown",
+              "entity.other.attribute-name.afm.markdown",
+              "punctuation.separator.key-value.afm.markdown",
+              "string.unquoted.afm.attribute-value.markdown"
+            ],
+            "settings": { "foreground": "#777777" }
           },
           {
-            "scope": "string.unquoted.afm.attribute-value.markdown",
-            "settings": { "foreground": "#267F99" }
+            "scope": [
+              "punctuation.definition.list.begin.markdown",
+              "beginning.punctuation.definition.list.markdown"
+            ],
+            "settings": { "foreground": "#268E6C" }
           }
         ]
       }
@@ -129,35 +161,6 @@
         }
       ]
     },
-    "markdown.previewStyles": [
-      "./assets/styles/typekit.css",
-      "./assets/styles/base.css",
-      "./assets/styles/adobe-preview.css"
-    ],
-    "markdown.previewScripts": [
-      "./assets/scripts/prism/prism.js",
-      "./assets/scripts/prism/prism-clike.js",
-      "./assets/scripts/prism/prism-javascript.js",
-      "./assets/scripts/prism/prism-typescript.js",
-      "./assets/scripts/prism/prism-markup.js",
-      "./assets/scripts/prism/prism-markup-templating.js",
-      "./assets/scripts/prism/prism-css.js",
-      "./assets/scripts/prism/prism-scss.js",
-      "./assets/scripts/prism/prism-json.js",
-      "./assets/scripts/prism/prism-bash.js",
-      "./assets/scripts/prism/prism-python.js",
-      "./assets/scripts/prism/prism-yaml.js",
-      "./assets/scripts/prism/prism-java.js",
-      "./assets/scripts/prism/prism-sql.js",
-      "./assets/scripts/prism/prism-graphql.js",
-      "./assets/scripts/prism/prism-diff.js",
-      "./assets/scripts/prism/prism-http.js",
-      "./assets/scripts/prism/prism-velocity.js",
-      "./assets/scripts/prism/prism-apex.js",
-      "./assets/scripts/prism/prism-php.js",
-      "./assets/scripts/prism-init.js"
-    ],
-    "markdown.markdownItPlugins": true,
     "grammars": [
       {
         "scopeName": "markdown.afm.injection",
@@ -167,116 +170,15 @@
         ]
       }
     ],
-    "configurationDefaults": {
-      "editor.tokenColorCustomizations": {
-        "textMateRules": [
-          {
-            "scope": [
-              "keyword.other.afm.admonition.informative.markdown",
-              "string.quoted.double.afm.value.admonition.informative.markdown",
-              "string.unquoted.afm.value.admonition.informative.markdown"
-            ],
-            "settings": {
-              "foreground": "#1473E6",
-              "fontStyle": "bold"
-            }
-          },
-          {
-            "scope": "markup.quote.afm.content.admonition.informative.markdown",
-            "settings": {
-              "foreground": "#1473E6",
-              "fontStyle": ""
-            }
-          },
-          {
-            "scope": [
-              "keyword.other.afm.admonition.positive.markdown",
-              "string.quoted.double.afm.value.admonition.positive.markdown",
-              "string.unquoted.afm.value.admonition.positive.markdown"
-            ],
-            "settings": {
-              "foreground": "#268E6C",
-              "fontStyle": "bold"
-            }
-          },
-          {
-            "scope": "markup.quote.afm.content.admonition.positive.markdown",
-            "settings": {
-              "foreground": "#268E6C",
-              "fontStyle": ""
-            }
-          },
-          {
-            "scope": [
-              "keyword.other.afm.admonition.caution.markdown",
-              "string.quoted.double.afm.value.admonition.caution.markdown",
-              "string.unquoted.afm.value.admonition.caution.markdown"
-            ],
-            "settings": {
-              "foreground": "#E68619",
-              "fontStyle": "bold"
-            }
-          },
-          {
-            "scope": "markup.quote.afm.content.admonition.caution.markdown",
-            "settings": {
-              "foreground": "#E68619",
-              "fontStyle": ""
-            }
-          },
-          {
-            "scope": [
-              "keyword.other.afm.admonition.negative.markdown",
-              "string.quoted.double.afm.value.admonition.negative.markdown",
-              "string.unquoted.afm.value.admonition.negative.markdown"
-            ],
-            "settings": {
-              "foreground": "#D7373F",
-              "fontStyle": "bold"
-            }
-          },
-          {
-            "scope": "markup.quote.afm.content.admonition.negative.markdown",
-            "settings": {
-              "foreground": "#D7373F",
-              "fontStyle": ""
-            }
-          },
-          {
-            "scope": [
-              "keyword.other.afm.admonition.neutral.markdown",
-              "string.quoted.double.afm.value.admonition.neutral.markdown",
-              "string.unquoted.afm.value.admonition.neutral.markdown"
-            ],
-            "settings": {
-              "foreground": "#555555",
-              "fontStyle": "bold"
-            }
-          },
-          {
-            "scope": "markup.quote.afm.content.admonition.neutral.markdown",
-            "settings": {
-              "foreground": "#555555",
-              "fontStyle": ""
-            }
-          },
-          {
-            "scope": [
-              "keyword.other.afm.collapsible.markdown",
-              "string.unquoted.afm.collapsible.title.markdown"
-            ],
-            "settings": {
-              "foreground": "#9256D9",
-              "fontStyle": "bold"
-            }
-          }
-        ]
-      }
-    },
     "configuration": {
       "type": "object",
       "title": "Markdown Authoring",
       "properties": {
+        "adobeExl.preview.diagnosticMode": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "When enabled, Adobe Preview posts font/CSS diagnostics to the **Adobe Markdown Authoring** output channel after each load. Reopen the preview after toggling. Combine with **Adobe Preview: Open Webview Developer Tools** to inspect the panel in Chromium DevTools."
+        },
         "markdown.replaceSmartQuotes": {
           "type": "boolean",
           "default": true,
@@ -350,6 +252,20 @@
       }
     },
     "commands": [
+      {
+        "command": "adobeExl.openAdobePreview",
+        "title": "Adobe Preview",
+        "category": "Markdown Authoring",
+        "icon": {
+          "dark": "./assets/icons/grid_white.svg",
+          "light": "./assets/icons/grid_black.svg"
+        }
+      },
+      {
+        "command": "adobeExl.openAdobePreviewDeveloperTools",
+        "title": "Adobe Preview: Open Webview Developer Tools",
+        "category": "Markdown Authoring"
+      },
       {
         "command": "md-shortcut.toggleBold",
         "title": "Toggle bold",
@@ -838,6 +754,11 @@
       ],
       "editor/title": [
         {
+          "command": "adobeExl.openAdobePreview",
+          "when": "markdown:enabled",
+          "group": "navigation@0"
+        },
+        {
           "command": "md-shortcut.toggleBold",
           "when": "markdown:enabled && config.markdown.icons.bold",
           "group": "navigation@1"
@@ -871,12 +792,13 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run sync-preview-fonts && npm run compile",
     "compile": "tsc -p ./",
     "lint": "eslint src --ext ts",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "test": "node ./out/test/runTest.js",
+    "sync-preview-fonts": "node scripts/sync-preview-fonts.js",
     "prepare": "husky"
   },
   "extensionDependencies": [
@@ -888,10 +810,13 @@
     "axios": "^1.15.2",
     "js-yaml": "^4.1.0",
     "markdown-it": "^13.0.1",
+    "markdown-it-anchor": "^9.2.0",
     "markdown-it-replace-link": "^1.1.0",
     "markdownlint-cli2": "^0.18.1"
   },
   "devDependencies": {
+    "@fontsource/roboto": "^5.2.10",
+    "@fontsource/roboto-mono": "^5.2.8",
     "@types/glob": "^7.1.3",
     "@types/markdown-it": "^13.0.9",
     "@types/mocha": "^9.1.1",

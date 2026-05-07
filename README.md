@@ -1,14 +1,12 @@
 # Adobe Experience League Markdown Authoring
 
-A Visual Studio Code extension for authoring Adobe Experience League documentation. It enhances the built-in Markdown preview with Adobe-flavored syntax and adds a Build Monitor panel for PR status visibility.
-
-**Note:** The Markdown Preview Enhanced extension deletes the Right Click > Open Preview option. Disable or uninstall that extension to see the new preview.
+A Visual Studio Code extension for authoring Adobe Experience League documentation. It provides a dedicated **Adobe Preview** webview for Adobe-flavored Markdown and adds a Build Monitor panel for PR status visibility.
 
 ## Features
 
-### Adobe Markdown preview
+### Adobe Preview
 
-Renders EXL-specific Markdown extensions in the VS Code preview panel:
+Renders EXL-specific Markdown extensions in the extension’s own preview panel (not the built-in Markdown preview, so other preview extensions cannot override this styling):
 
 - Alert blocks: `>[!NOTE]`, `>[!TIP]`, `>[!IMPORTANT]`, `>[!WARNING]`, `>[!CAUTION]`, and more
 - Shade boxes: `>[!BEGINSHADEBOX]` / `>[!ENDSHADEBOX]`
@@ -21,7 +19,7 @@ Renders EXL-specific Markdown extensions in the VS Code preview panel:
 - Prism syntax highlighting for code blocks (JavaScript, TypeScript, JSON, Bash, Python, SQL, YAML, Velocity, and more)
 - Source editor coloring for AFM tag names, values, and badge attributes
 
-**To see all supported syntax in action:** open [preview-test.md](preview-test.md), right-click on the file name tab and Open Preview.
+**To see all supported syntax in action:** open [preview-test.md](preview-test.md), then run the **Adobe Preview** command from the Command Palette or choose the grid icon in the Markdown editor title bar.
 
 ### GitHub Actions CI Monitor
 
@@ -96,11 +94,20 @@ Keyboard shortcuts for common EXL authoring tasks.
 
 Validates EXL Markdown on save using [markdownlint](https://github.com/DavidAnson/markdownlint) with Adobe-specific custom rules (AM001, AM009, AM011, etc.). Default rules are applied on first run; override them in **Preferences > Settings > markdownlint**.
 
+## Development
+
+- **Compile:** `npm run compile`
+- **Lint:** `npm run lint`
+- **Preview fonts:** Adobe Preview bundles **Roboto** / **Roboto Mono** (Experience League) as WOFF2 under `assets/fonts/preview/`, referenced from `assets/styles/preview-fonts.css` (loaded in the webview). After updating `@fontsource/roboto*`, run `npm run sync-preview-fonts` (also runs before `vscode:prepublish`) and update `@font-face` entries in `preview-fonts.css` if filenames change.
+- **Integration tests:** `npm test` (downloads a VS Code build into `.vscode-test` on first run)
+
+If `npm test` fails with `spawn .../Electron ENOENT`, the cached VS Code under `.vscode-test` is incomplete or moved. Remove that folder and run `npm test` again so `@vscode/test-electron` can re-download.
+
 ## Installation
 
 Install from the Visual Studio Code Marketplace, or install the `.vsix` directly via **Extensions > Install from VSIX**.
 
-Requires VS Code 1.44.0 or higher.
+Requires VS Code 1.75.0 or higher (see `engines` in `package.json`).
 
 ## More information
 

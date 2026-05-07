@@ -139,6 +139,51 @@
         }
       ]
     },
+    "afm-fenced-code-in-admonition-blockquote": {
+      "comment": "Fenced code inside > admonitions: body line rule below would flatten the whole line to meta.afm.admonition.body.* and kill language injection.",
+      "begin": "^(\\s*>\\s*)(```)([^\\n]*)$",
+      "beginCaptures": {
+        "2": {
+          "name": "markup.fenced_code.block.markdown punctuation.definition.markdown"
+        },
+        "3": {
+          "name": "markup.fenced_code.block.markdown fenced_code.block.language.attributes.markdown"
+        }
+      },
+      "end": "^(\\s*>\\s*)(```)\\s*$",
+      "applyEndPatternLast": true,
+      "endCaptures": {
+        "2": {
+          "name": "markup.fenced_code.block.markdown punctuation.definition.markdown"
+        }
+      },
+      "patterns": [
+        {
+          "match": "^\\s*>\\s?(.*)$",
+          "captures": {
+            "1": {
+              "name": "meta.embedded.block.markdown",
+              "patterns": [
+                { "include": "source.json" },
+                { "include": "source.js" },
+                { "include": "source.ts" },
+                { "include": "source.tsx" },
+                { "include": "source.python" },
+                { "include": "source.shellscript" },
+                { "include": "source.yaml" },
+                { "include": "text.html.basic" },
+                { "include": "source.css" },
+                { "include": "source.java" },
+                { "include": "source.sql" },
+                { "include": "source.xml" },
+                { "include": "source.cpp" },
+                { "include": "source.cs" }
+              ]
+            }
+          }
+        }
+      ]
+    },
     "afm-informative-admonition-tag": {
       "name": "meta.afm.tag.markdown",
       "begin": "(\\[!)(NOTE|INFO|ADMIN|ADMINISTRATION|AVAILABILITY|PREREQUISITES|CONTEXTUALHELP)\\b",
@@ -182,10 +227,13 @@
       "end": "^(?!\\s*>)",
       "patterns": [
         {
+          "include": "#afm-fenced-code-in-admonition-blockquote"
+        },
+        {
           "match": "^(\\s*>\\s?)(?!\\[!)(.+)$",
           "captures": {
             "2": {
-              "name": "markup.quote.afm.content.admonition.informative.markdown"
+              "name": "meta.afm.admonition.body.informative.markdown"
             }
           }
         }
@@ -234,10 +282,13 @@
       "end": "^(?!\\s*>)",
       "patterns": [
         {
+          "include": "#afm-fenced-code-in-admonition-blockquote"
+        },
+        {
           "match": "^(\\s*>\\s?)(?!\\[!)(.+)$",
           "captures": {
             "2": {
-              "name": "markup.quote.afm.content.admonition.positive.markdown"
+              "name": "meta.afm.admonition.body.positive.markdown"
             }
           }
         }
@@ -286,10 +337,13 @@
       "end": "^(?!\\s*>)",
       "patterns": [
         {
+          "include": "#afm-fenced-code-in-admonition-blockquote"
+        },
+        {
           "match": "^(\\s*>\\s?)(?!\\[!)(.+)$",
           "captures": {
             "2": {
-              "name": "markup.quote.afm.content.admonition.caution.markdown"
+              "name": "meta.afm.admonition.body.caution.markdown"
             }
           }
         }
@@ -338,10 +392,13 @@
       "end": "^(?!\\s*>)",
       "patterns": [
         {
+          "include": "#afm-fenced-code-in-admonition-blockquote"
+        },
+        {
           "match": "^(\\s*>\\s?)(?!\\[!)(.+)$",
           "captures": {
             "2": {
-              "name": "markup.quote.afm.content.admonition.negative.markdown"
+              "name": "meta.afm.admonition.body.negative.markdown"
             }
           }
         }
@@ -390,10 +447,13 @@
       "end": "^(?!\\s*>)",
       "patterns": [
         {
+          "include": "#afm-fenced-code-in-admonition-blockquote"
+        },
+        {
           "match": "^(\\s*>\\s?)(?!\\[!)(.+)$",
           "captures": {
             "2": {
-              "name": "markup.quote.afm.content.admonition.neutral.markdown"
+              "name": "meta.afm.admonition.body.neutral.markdown"
             }
           }
         }
