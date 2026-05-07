@@ -12,8 +12,8 @@ export function function_(params, onError) {
     var checklines = [];
     shared.filterTokens(params, "blockquote_open", function forToken(token) {
         var index = 0;
-        checklines.push(Math.max(0, token.map[0] - 1));
-        checklines.push(token.map[1]);
+        checklines.push(token.map[0]);       // 1-indexed line before blockquote
+        checklines.push(token.map[1] + 1);  // 1-indexed line after blockquote
     });
 
     shared.forEachLine(params, function forLine(line, i) {

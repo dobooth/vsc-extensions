@@ -1,5 +1,7 @@
 {
+  "AM018": false,
+  "AM056": false,
   "MD013": false,
   "MD028": false,
-  "MD025": { "front_matter_title": "" }
+  "MD025": false
 }

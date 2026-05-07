@@ -237,9 +237,9 @@
 /* ─── IMPORTANT ──────────────────────────────────────────────────────────── */
 .vscode-body .extension.important {
   background-color: #fdfdfd !important;
-  border-left-color: #E68619 !important;
+  border-left-color: #C07B15 !important;
 }
-.vscode-body .extension.important::before { content: "⚠\00a0" attr(data-label); color: #E68619; }
+.vscode-body .extension.important::before { content: "⚠\00a0" attr(data-label); color: #C07B15; }
 
 /* ─── WARNING ────────────────────────────────────────────────────────────── */
 .vscode-body .extension.warning {
@@ -251,9 +251,9 @@
 /* ─── CAUTION ────────────────────────────────────────────────────────────── */
 .vscode-body .extension.caution {
   background-color: #fdfdfd !important;
-  border-left-color: #E68619 !important;
+  border-left-color: #C07B15 !important;
 }
-.vscode-body .extension.caution::before { content: "⚠\00a0" attr(data-label); color: #E68619; }
+.vscode-body .extension.caution::before { content: "⚠\00a0" attr(data-label); color: #C07B15; }
 
 /* ─── ERROR ──────────────────────────────────────────────────────────────── */
 .vscode-body .extension.error {
@@ -269,15 +269,33 @@
 }
 .vscode-body .extension.success::before { content: "✓\00a0" attr(data-label); color: #268E6C; }
 
+/* ─── Code inside alert boxes ─────────────────────────────────────────────── */
+/* Lighter blue replaces the dark (#1d1f21) block background inside admonishments */
+.vscode-body .extension code {
+  background-color: #dbeeff;
+  color: #1a3a5c;
+}
+.vscode-body .extension pre {
+  background-color: #cce4ff !important;
+  color: #0f2d4e;
+}
+.vscode-body .extension pre code {
+  background: none;
+  color: #0f2d4e;
+}
+
+/* ─── Adobe inline macro brackets ([!DNL …] / [!UICONTROL …]) ────────────── */
+.vscode-body .exl-macro-meta {
+  color: #999;
+}
+
 /* ─── MORELIKETHIS ───────────────────────────────────────────────────────── */
 .vscode-body .extension.morelikethis {
-  background-color: #fdfdfd;
-  border-left-color: #aaa;
+  background-color: #fdfdfd !important;
+  border-left-color: #1473E6 !important;
 }
-.vscode-body .extension.morelikethis::before {
-  color: #555;
-  text-transform: none;
-}
+.vscode-body .extension.morelikethis::before { color: #1473E6; }
+.vscode-body .extension.morelikethis a { text-decoration: none; }
 
 /* ─── Shade boxes (>[!BEGINSHADEBOX] / >[!ENDSHADEBOX]) ──────────────────── */
 .vscode-body .shadebox {
@@ -328,8 +346,8 @@
 }
 .vscode-body .badge-caution {
   background-color: #FEF5E6;
-  color: #E68619;
-  border: 1px solid #E68619;
+  color: #C07B15;
+  border: 1px solid #C07B15;
 }
 
 /* ─── Tabs (>[!BEGINTABS] / >[!TAB] / >[!ENDTABS]) ──────────────────────── */

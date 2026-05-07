@@ -1,91 +1,17 @@
   const vscode = acquireVsCodeApi();
-  let _tokenUrl = '';
-  let _reportTimestamp = null;
-  let _issueCount = 0;
-  let _uncommittedCount = 0;
   let _pollInterval = null;
-  const REPORT_INTERVAL_MS = 4 * 60 * 60 * 1000;
-
-  function fmtMins(mins) {
-    if (mins < 60) { return mins + 'm'; }
-    const h = Math.floor(mins / 60), m = mins % 60;
-    return m ? h + 'h ' + m + 'm' : h + 'h';
-  }
-
-  function updateReportStatusCard() {
-    const card = document.getElementById('reportStatusCard');
-    const icon = document.getElementById('reportStatusIcon');
-    const text = document.getElementById('reportStatusText');
-    const next = document.getElementById('reportNextLine');
-    if (!card || !icon || !text || !next) { return; }
-    if (!_reportTimestamp) {
-      icon.textContent = '○'; icon.style.color = '';
-      text.textContent = _issueCount ? _issueCount + ' issues' : 'Loading…';
-      text.style.color = '';
-      next.textContent = '';
-      return;
-    }
-    card.style.display = 'block';
-
-    const ageMs = Date.now() - _reportTimestamp;
-    const ageMins = Math.floor(ageMs / 60000);
-    const ageStr = fmtMins(ageMins) + ' ago';
-    const stale = ageMs > REPORT_INTERVAL_MS;
-
-    const nextMs = REPORT_INTERVAL_MS - (ageMs % REPORT_INTERVAL_MS);
-    const nextMins = Math.ceil(nextMs / 60000);
-    const nextStr = fmtMins(nextMins);
-
-    if (_issueCount === 0) {
-      icon.textContent = '✓';
-      icon.style.color = 'var(--vscode-testing-iconPassed, #4caf50)';
-      text.textContent = 'All clear';
-      text.style.color = 'var(--vscode-testing-iconPassed, #4caf50)';
-    } else {
-      icon.textContent = '⚠';
-      icon.style.color = stale ? 'var(--vscode-errorForeground)' : 'var(--vscode-notificationsWarningIcon-foreground, #d7ba7d)';
-      text.textContent = _issueCount + ' issue' + (_issueCount === 1 ? '' : 's') + ' need attention';
-      text.style.color = stale ? 'var(--vscode-errorForeground)' : '';
-    }
-
-    next.textContent = 'Report from ' + ageStr + (stale ? ' — overdue' : '  ·  next in ~' + nextStr);
-    next.style.color = stale ? 'var(--vscode-errorForeground)' : 'var(--vscode-descriptionForeground)';
-  }
-
-  setInterval(updateReportStatusCard, 60000);
 
   function refresh() { vscode.postMessage({ command: 'refresh' }); }
-  function mergePush() { vscode.postMessage({ command: 'mergePush' }); }
   function autoFix() { vscode.postMessage({ command: 'autoFix' }); }
   function pushCheck() {
     vscode.postMessage({ command: 'pushCheck' });
   }
   function commitAndPush() { vscode.postMessage({ command: 'commitAndPush' }); }
-  function repofixes() { vscode.postMessage({ command: 'repofixes' }); }
   function applyFixes() { vscode.postMessage({ command: 'applyFixes' }); }
-
-  function openTokenUrl() {
-    if (_tokenUrl) vscode.postMessage({ command: 'openUrl', url: _tokenUrl });
-  }
 
   function openUrl(url) {
     vscode.postMessage({ command: 'openUrl', url });
   }
-
-  function submitCredentials() {
-    const ghToken = document.getElementById('ghTokenInput').value.trim();
-    const claudeKey = document.getElementById('claudeKeyInput').value.trim();
-    const openAiKey = document.getElementById('openAiKeyInput').value.trim();
-    const err = document.getElementById('setupError');
-    err.style.display = 'none';
-    vscode.postMessage({ command: 'saveCredentials', ghToken, claudeKey, openAiKey });
-  }
-
-  const setupInputIds = ['ghTokenInput', 'claudeKeyInput', 'openAiKeyInput'];
-  setupInputIds.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.addEventListener('keydown', function(e) { if (e.key === 'Enter') submitCredentials(); }); }
-  });
 
   function switchTab(tab) {
     document.querySelectorAll('.sp-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
@@ -209,93 +135,6 @@
     return html;
   }
 
-  function renderRepofixes(futureErrors, linkErrors) {
-    let html = '';
-    const fixedRows = [];
-    const flaggedRows = [];
-
-    function fileLink(file, line) {
-      return '<span class="error-file open-file" data-file="' + escAttr(file) + '" data-line="' + escAttr(line || '') + '">'
-        + escHtml(file) + (line ? '<span style="color:var(--vscode-descriptionForeground)">:' + escHtml(line) + '</span>' : '')
-        + '</span>';
-    }
-
-    if (futureErrors && futureErrors.length) {
-      const active = futureErrors.filter(e => !e.alreadyFixed && !e.falsePositive);
-      if (active.length) {
-        html += '<div class="section-title" style="margin-bottom:4px">Internal Link Issues (' + active.length + ')</div>';
-        for (const e of active) {
-          const canFix = e.bucket === 'suggest-delink';
-          const badge = canFix
-            ? '<span class="repofix-bucket bucket-fix">Auto Fix</span>'
-            : '<span class="repofix-bucket bucket-manual">manual</span>';
-          html += '<div class="repofix-row">' + fileLink(e.file, '') + badge;
-          html += '<div class="repofix-desc">' + escHtml(e.description) + '</div></div>';
-        }
-      }
-      for (const e of futureErrors.filter(e => e.alreadyFixed)) {
-        fixedRows.push('<div class="repofix-row">' + fileLink(e.file, '')
-          + '<span class="repofix-bucket bucket-fixed">Fixed Locally</span></div>');
-      }
-      for (const e of futureErrors.filter(e => e.falsePositive)) {
-        flaggedRows.push('<div class="repofix-row">' + fileLink(e.file, '')
-          + '<span class="repofix-bucket bucket-flagged">False Positive</span>'
-          + '<div class="repofix-url">' + escHtml(e.url || '') + '</div></div>');
-      }
-    }
-
-    if (linkErrors && linkErrors.length) {
-      const active = linkErrors.filter(e => !e.alreadyFixed && !e.falsePositive);
-      if (active.length) {
-        html += '<div class="section-title" style="margin:10px 0 4px">External Link Issues (' + active.length + ')</div>';
-        for (const e of active) {
-          html += '<div class="repofix-row">' + fileLink(e.file, e.line)
-            + '<span class="repofix-bucket bucket-fix">Auto Fix</span>';
-          html += '<div class="repofix-url">' + escHtml(e.url) + '</div>';
-          if (e.reason) { html += '<div class="repofix-desc">' + escHtml(e.reason) + '</div>'; }
-          html += '</div>';
-        }
-      }
-      for (const e of linkErrors.filter(e => e.alreadyFixed)) {
-        fixedRows.push('<div class="repofix-row">' + fileLink(e.file, e.line)
-          + '<span class="repofix-bucket bucket-fixed">Fixed Locally</span></div>');
-      }
-      for (const e of linkErrors.filter(e => e.falsePositive)) {
-        flaggedRows.push('<div class="repofix-row">' + fileLink(e.file, e.line)
-          + '<span class="repofix-bucket bucket-flagged">False Positive</span>'
-          + '<div class="repofix-url">' + escHtml(e.url) + '</div></div>');
-      }
-    }
-
-    if (fixedRows.length) {
-      if (html) {
-        // Active errors exist — show expandable fixed list alongside them
-        html += '<div class="section-title collapsible-hdr" style="margin:10px 0 4px;cursor:pointer;user-select:none" onclick="toggleSection(\'fixedLocallyList\')">'
-          + '▶ Fixed Locally (' + fixedRows.length + ')</div>';
-        html += '<div id="fixedLocallyList" style="display:none">' + fixedRows.join('') + '</div>';
-      // No active errors — fixed rows are stale report noise, suppress them
-      }
-    }
-
-    if (flaggedRows.length) {
-      html += '<div class="section-title collapsible-hdr" style="margin:10px 0 4px;cursor:pointer;user-select:none" onclick="toggleSection(\'flaggedList\')">'
-        + '▶ Incorrectly Flagged (' + flaggedRows.length + ')</div>';
-      html += '<div id="flaggedList" style="display:none">' + flaggedRows.join('') + '</div>';
-    }
-
-    if (!html) { html = '<span class="empty">No outstanding issues.</span>'; }
-    return html;
-  }
-
-  function toggleSection(id) {
-    const el = document.getElementById(id);
-    if (!el) { return; }
-    const hdr = el.previousElementSibling;
-    const open = el.style.display === 'none';
-    el.style.display = open ? 'block' : 'none';
-    if (hdr) { hdr.textContent = hdr.textContent.replace(open ? '▶' : '▼', open ? '▼' : '▶'); }
-  }
-
   function updatePipelineStep(iconId, statusId, history) {
     const iconEl = document.getElementById(iconId);
     const statusEl = document.getElementById(statusId);
@@ -368,33 +207,6 @@
     const msg = event.data;
     try {
     switch (msg.type) {
-      case 'showSetup': {
-        const hasToken = msg.hasToken !== false;
-        const ghField = document.getElementById('ghTokenField');
-        if (ghField) { ghField.style.display = hasToken ? 'none' : 'block'; }
-        const intro = document.getElementById('setupIntro');
-        if (intro) {
-          intro.textContent = hasToken
-            ? 'Add a Claude API key to enable Apply Fixes. GitHub access uses your existing gh CLI authentication.'
-            : 'GitHub token not found. Run "gh auth login" or paste a personal access token below.';
-        }
-        document.getElementById('setupPanel').style.display = 'block';
-        document.getElementById('mainPanel').style.display = 'none';
-        const focusId = hasToken ? 'claudeKeyInput' : 'ghTokenInput';
-        const focusEl = document.getElementById(focusId);
-        if (focusEl) focusEl.focus();
-        break;
-      }
-
-      case 'hideSetup':
-        document.getElementById('setupPanel').style.display = 'none';
-        document.getElementById('mainPanel').style.display = 'block';
-        ['ghTokenInput', 'claudeKeyInput', 'openAiKeyInput'].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.value = '';
-        });
-        break;
-
       case 'loading':
         break;
 
@@ -406,7 +218,6 @@
       }
 
       case 'statusData': {
-        _uncommittedCount = msg.uncommittedCount || 0;
         document.getElementById('repoInfo').textContent = (msg.repo || '?') + '  ·  ' + (msg.branch || '?');
         document.getElementById('buildHistory').innerHTML = renderHistory(msg.runs, null);
         document.getElementById('errorList').innerHTML = renderErrors(msg.summary);
@@ -478,45 +289,6 @@
           const diffEl = row.querySelector('.diff-pre');
           if (diffEl) { diffEl.remove(); }
         }
-        break;
-      }
-
-      case 'repofixesData': {
-        const activeCount = (msg.futureErrors?.filter(e => !e.alreadyFixed && !e.falsePositive).length || 0)
-          + (msg.linkErrors?.filter(e => !e.alreadyFixed && !e.falsePositive).length || 0);
-        _issueCount = activeCount;
-        document.getElementById('tabOtherErrors').textContent = activeCount ? 'Other Errors (' + activeCount + ')' : 'Other Errors';
-        document.getElementById('applyFixesBtn').style.display = activeCount ? '' : 'none';
-        document.getElementById('repofixList').innerHTML = renderRepofixes(msg.futureErrors, msg.linkErrors);
-        if (msg.reportTimestamp) { _reportTimestamp = msg.reportTimestamp; }
-        document.getElementById('reportStatusCard').style.display = 'block';
-        updateReportStatusCard();
-        if (msg.isNew) {
-          const banner = document.getElementById('reportNewBanner');
-          banner.style.display = 'block';
-          setTimeout(() => { banner.style.display = 'none'; }, 6000);
-        }
-        break;
-      }
-
-      case 'showOtherLog': {
-        const st = document.getElementById('otherStatus');
-        st.innerHTML = '';
-        st.style.display = 'block';
-        const fc = document.getElementById('fixCards');
-        fc.innerHTML = '';
-        fc.style.display = 'none';
-        break;
-      }
-
-      case 'otherLog': {
-        const el = document.getElementById('otherStatus');
-        if (!el) break;
-        el.style.display = 'block';
-        const div = document.createElement('div');
-        if (msg.isError) div.className = 'status-error';
-        div.textContent = msg.text || '';
-        el.appendChild(div);
         break;
       }
 

@@ -3,9 +3,11 @@ BEGINTABS
 ENDTABS
 BEGINSHADEBOX
 ENDSHADEBOX
+CONTEXTUALHELP
 MORELIKETHIS
 UICONTROL
 DNL
+SLIDE
 NOTE
 TIP
 CAUTION
@@ -14,12 +16,18 @@ IMPORTANT
 PREREQUISITES
 AVAILABILITY
 ADMIN
+ADMINISTRATION
 INFO
 ERROR
 SUCCESS
 VIDEO
 TAB
+TABS
 BADGE
+__BETA
+__BETA_
+__BETA_ACCORDIAN
+__BETA_TAB
 
 # Adobe product and brand names
 Bizible
@@ -57,6 +65,30 @@ exl-id
 zoomable
 hidefromtoc
 frontmatter
+GHEC
+markdownlinting
+Redocly
+repoint
+Shadebox
+shadebox
+undefinedchannels
+
+# Markdown / lint rule terminology
+analysing
+blockquotes
+clike
+codespan
+davidanson
+setext
+sublist
+typekit
+
+# Placeholder text used in rule examples
+adipiscing
+amet
+Consectetur
+eiusmod
+elit
 
 # Standard tech abbreviations cspell may flag
 ABM

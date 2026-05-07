@@ -15,7 +15,7 @@ All notable changes to the ExL Markdown Authoring extension are documented here.
 - **Toggle Shadebox** — insert `>[!BEGINSHADEBOX]` / `>[!ENDSHADEBOX]` block
 - **Toggle Collapsible** — insert `+++Title` / `+++` collapsible section
 - **Prism syntax highlighting** — added JSON, TypeScript, Python, SQL, YAML, and more to the preview panel
-- **Updated Linting** - incorporated the latest Adobe markdownlinting rules. https://github.com/Adobe-Enterprise-Docs/markdownlint-custom
+- **Updated Linting** - incorporated the latest Adobe markdownlinting rules.
 
 ## [1.1.7]
 

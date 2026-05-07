@@ -202,6 +202,12 @@ export function function_(params, onError) {
     return;
   }
 
+  // Skip files that are not on-demand events — AM056 only applies to Event and Value Video docs
+  const docType = fm.data["doc-type"];
+  if (docType !== "Event" && docType !== "Value Video") {
+    return;
+  }
+
   // 3) Schema validate
   if (!ensureSchemaLoaded()) {
     addSafeError(onError, fmStartLine - frontMatterLineCount, "Schema validation unavailable", maxReportLine);

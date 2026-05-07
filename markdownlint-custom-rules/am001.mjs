@@ -17,7 +17,7 @@ export function function_(params, onError) {
         const startLine = Array.isArray(token.map) ? (token.map[0] + 1) : ((token.lineNumber || 1));
         const raw_line = params.lines[startLine - 1] || "";
 
-        if (heading_title.match(/.*?\d+/) && !heading_title.match(/\{\#.*?\}$/)) {
+        if (heading_title.match(/^\d+/) && !heading_title.match(/\{\#.*?\}$/)) {
             addErrorContext(onError, startLine, raw_line);
         }
         // if (heading_title.match(/.*?{#\d+.*?}/)) {

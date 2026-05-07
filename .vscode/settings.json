@@ -18,6 +18,8 @@
         "AM001": false,
         "AM009": false,
         "AM011": false,
+        "AM018": false,
+        "AM056": false,
         "MD003": {
             "style": "atx"
         },
@@ -31,9 +33,7 @@
         "MD012": false,
         "MD014": false,
         "MD024": false,
-        "MD025": {
-            "front_matter_title": ""
-        },
+        "MD025": false,
         "MD026": false,
         "MD027": false,
         "MD028": false,

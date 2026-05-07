@@ -51,13 +51,16 @@ export function runLocalLint(
   try {
     const absFiles = mdFiles.map(f => path.join(repoRoot, f));
     const wordsFile = path.join(extensionPath, 'assets', 'cspell-exl-words.txt');
+    const cspellConfig = path.join(extensionPath, 'cspell.json');
     const args = [
       '--no-progress', '--no-summary', '--no-color',
-      '--ignore-regexp', '`[^`\\n]+`',           // inline code
-      '--ignore-regexp', 'https?://\\S+',         // URLs
-      '--ignore-regexp', '\\[![A-Z][A-Z0-9]*[^\\]]*\\]', // EXL macros [!NOTE] [!DNL ...] etc.
-      '--ignore-regexp', '\\{[^}]+\\}',           // attribute blocks {#id} {width="640"}
-      ...(fs.existsSync(wordsFile) ? ['--words-only', '--user-words-file', wordsFile] : []),
+      ...(fs.existsSync(cspellConfig) ? ['--config', cspellConfig] : [
+        '--ignore-regexp', '`[^`\\n]+`',           // inline code
+        '--ignore-regexp', 'https?://\\S+',         // URLs
+        '--ignore-regexp', '\\[![A-Z_][A-Z0-9_]*[^\\]]*\\]', // EXL macros [!NOTE] [!DNL ...] etc.
+        '--ignore-regexp', '\\{[^}]+\\}',           // attribute blocks {#id} {width="640"}
+        ...(fs.existsSync(wordsFile) ? ['--words-only', '--user-words-file', wordsFile] : []),
+      ]),
       ...absFiles,
     ];
     const result = spawnSync('cspell', args, { cwd: repoRoot, encoding: 'utf8' });

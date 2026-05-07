@@ -23,7 +23,12 @@ const { default: customRules } = await import(pathToFileURL(rulesPath).href);
 const configPath = path.join(repoRoot, ".markdownlint.json");
 const config = fs.existsSync(configPath)
   ? JSON.parse(fs.readFileSync(configPath, "utf8"))
-  : { MD013: false };
+  : {
+      MD013: false,
+      MD025: false,  // EXL convention: frontmatter title + H1 heading coexist
+      MD028: false,  // EXL admonition syntax requires blank > line between tag and content
+      MD033: false,  // EXL docs use HTML tables for complex layouts
+    };
 
 const markdownItFactory = async () => {
   const { default: markdownIt } = await import("markdown-it");

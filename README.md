@@ -18,7 +18,8 @@ Renders EXL-specific Markdown extensions in the VS Code preview panel:
 - Embedded video: `>[!VIDEO](url)`
 - Inline badges: `[!BADGE Label]{type=Informative}`
 - Localization macros: `[!DNL product]`, `[!UICONTROL label]`
-- Prism syntax highlighting for code blocks (JavaScript, TypeScript, JSON, Bash, Python, SQL, YAML, and more)
+- Prism syntax highlighting for code blocks (JavaScript, TypeScript, JSON, Bash, Python, SQL, YAML, Velocity, and more)
+- Source editor coloring for AFM tag names, values, and badge attributes
 
 **To see all supported syntax in action:** open [preview-test.md](preview-test.md), right-click on the file name tab and Open Preview.
 

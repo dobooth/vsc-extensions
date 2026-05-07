@@ -48,6 +48,20 @@ Undefined channels are included in the visualization but have no attributed conv
 >
 >This is a prerequisites block. List what the reader needs before starting.
 
+>[!NOTE]
+>
+>Note with inline code: use `apiKey` and `secretToken` to authenticate. Block code below:
+>
+>```json
+>{ "apiKey": "abc123", "secretToken": "xyz" }
+>```
+
+>[!MORELIKETHIS]
+>
+>* [Alert blocks](#alert-blocks)
+>* [Localization macros](#localization-macros)
+>* [Badges](#badges)
+
 ## Shade boxes
 
 >[!BEGINSHADEBOX "Optional title"]
@@ -56,9 +70,9 @@ This content appears with a gray background. Use shade boxes to group related co
 
 You can include lists:
 
-- Item one
-- Item two
-- Item three
+* Item one
+* Item two
+* Item three
 
 >[!ENDSHADEBOX]
 
@@ -102,11 +116,21 @@ Use collapsible sections for optional or advanced content that would otherwise c
 
 ## Localization macros
 
-Use [!DNL Marketo] to wrap product names so they are not localized.
+Plain DNL: [!DNL Marketo]
 
-Use **[!UICONTROL Admin]** > **[!UICONTROL LaunchPoint]** for UI element labels.
+Plain UICONTROL: [!UICONTROL Admin]
 
-Combined example: In [!DNL Adobe Analytics], select **[!UICONTROL Workspace]** > **[!UICONTROL Create project]**.
+Bold UICONTROL (common): **[!UICONTROL Save]**
+
+Bold DNL: **[!DNL Adobe Analytics]**
+
+Italic DNL: *[!DNL Marketo Engage]*
+
+Italic UICONTROL: *[!UICONTROL Cancel]*
+
+Nav path: **[!UICONTROL Admin]** > **[!UICONTROL LaunchPoint]** > **[!UICONTROL New]**
+
+Sentence: In [!DNL Adobe Analytics], select **[!UICONTROL Workspace]** > **[!UICONTROL Create project]**.
 
 ## Badges
 
@@ -151,8 +175,8 @@ Required fields:
 
 The new user receives a welcome email with a link to set their password.
 
-- Link expires after 24 hours.
-- Users can request a new link from the login page.
+* Link expires after 24 hours.
+* Users can request a new link from the login page.
 
 >[!ENDTABS]
 

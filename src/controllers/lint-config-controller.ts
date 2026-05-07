@@ -90,9 +90,7 @@ const DEFAULT_MARKDOWNLINT_CONFIG = {
     "MD013": false,
     "MD014": false,
     "MD024": false,
-    "MD025": {
-      "front_matter_title": ""
-    },
+    "MD025": false,
     "MD026": false,
     "MD027": false,
     "MD028": false,

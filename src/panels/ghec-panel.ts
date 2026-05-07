@@ -47,7 +47,6 @@ export class GhecPanelProvider implements vscode.WebviewViewProvider {
       switch (msg.command) {
         case 'refresh':         await this._handleRefresh(); break;
         case 'pushCheck':       await this._handlePushCheck(); break;
-        case 'confirmPushCheck': await this._handleConfirmPushCheck(msg.uncommittedCount); break;
         case 'autoFix':         await this._handleAutoFix(); break;
         case 'applyFixes':      await this._handleApplyFixes(); break;
         case 'applyOneFix':     await this._handleApplyOneFix(msg.action, msg.filepath, msg.lineno, msg.candidate, msg.target); break;
@@ -201,19 +200,6 @@ export class GhecPanelProvider implements vscode.WebviewViewProvider {
       this._post('banner', { text: `Refresh failed: ${e.message}` });
     } finally {
       this._setLoading(false);
-    }
-  }
-
-  private async _handleConfirmPushCheck(uncommittedCount: number): Promise<void> {
-    const label = uncommittedCount === 1 ? '1 uncommitted file' : `${uncommittedCount} uncommitted files`;
-    const choice = await vscode.window.showWarningMessage(
-      `You have ${label}. Commit before pushing?`,
-      'Commit & Push', 'Push Anyway', 'Cancel'
-    );
-    if (choice === 'Commit & Push') {
-      await this._handleCommitAndPush();
-    } else if (choice === 'Push Anyway') {
-      await this._handlePushCheck();
     }
   }
 
