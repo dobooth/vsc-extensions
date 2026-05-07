@@ -2,7 +2,7 @@
   "name": "adobe-markdown-authoring",
   "displayName": "ExL Markdown Authoring",
   "description": "Adobe Preview (dedicated webview), linter validation, and keyboard shortcuts for Adobe Flavored Markdown.",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "publisher": "AdobeExL",
   "engines": {
     "vscode": "^1.75.0"
@@ -18,9 +18,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:markdown",
-    "onCommand:adobeExl.openAdobePreview",
-    "onCommand:adobeExl.openAdobePreviewDeveloperTools"
+    "onLanguage:markdown"
   ],
   "main": "./out/extension.js",
   "contributes": {

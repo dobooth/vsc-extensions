@@ -14,8 +14,6 @@ Use the **Adobe Preview** command to open this file in the extension's dedicated
 
 A horizontal bar graph visualization that displays the ROI or CPA performance by each of the channels. This visualization highlights the ROI / CPA of your marketing investments. The channels are ranked in descending order based on ROI / CPA. The visualization helps to identify which channels are most effective and which might need optimization.
 
-Undefined channels are included in the visualization but have no attributed conversions.
-
 ## Alert blocks
 
 >[!TIP]

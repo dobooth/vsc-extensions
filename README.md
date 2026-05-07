@@ -16,14 +16,19 @@ Renders EXL-specific Markdown extensions in the extension’s own preview panel 
 - Embedded video: `>[!VIDEO](url)`
 - Inline badges: `[!BADGE Label]{type=Informative}`
 - Localization macros: `[!DNL product]`, `[!UICONTROL label]`
-- Prism syntax highlighting for code blocks (JavaScript, TypeScript, JSON, Bash, Python, SQL, YAML, Velocity, and more)
+- Prism syntax highlighting for code blocks
 - Source editor coloring for AFM tag names, values, and badge attributes
+- Typography matching: Adobe Clean (via Creative Cloud) with Roboto as fallback
 
-**To see all supported syntax in action:** open [preview-test.md](preview-test.md), then run the **Adobe Preview** command from the Command Palette or choose the grid icon in the Markdown editor title bar.
+**To open:** right-click any `.md` file in the Explorer or the editor tab, choose **Adobe Preview** — or run the command from the Command Palette, or select the grid icon in the editor title bar.
+
+**To see all supported syntax in action:** open [preview-test.md](preview-test.md) and use any of the above methods.
 
 ### GitHub Actions CI Monitor
 
 Note: This feature is still under development.
+
+Another Note: Look and feel shamelessly stolen from https://github.com/Adobe-Enterprise-Docs/CursorAgents
 
 A sidebar panel (Activity Bar) for monitoring GitHub Actions CI builds without leaving VS Code.
 
